@@ -12,7 +12,7 @@ export function WalletInfo() {
   const currentChain = config.chains.find((chain) => chain.id === chainId);
 
   return (
-    <Box p={5} bg="blue.200" borderWidth="1px" borderRadius="lg" maxW="sm" mx="auto" mt={5}>
+    <Box p={5} className="card" borderWidth="1px" borderRadius="lg" maxW="sm" mx="auto" mt={5}>
       <VStack align="start">
         <Text fontSize="lg" fontWeight="bold" textAlign="center">
           Información de la Wallet
