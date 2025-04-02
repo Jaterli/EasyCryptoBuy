@@ -41,10 +41,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'users',
-    'payments'
+    'payments',
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -52,13 +54,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Puerto por defecto de Vite
+    "http://localhost:5174",
+    "http://localhost:3000",    
+    "http://127.0.0.1:5173",    
     #"eth.merkle.io",
 ]
+
+# CORS_ALLOW_ALL_ORIGINS = True
 
 load_dotenv()
 WEB3_PROVIDER = os.getenv('WEB3_PROVIDER')

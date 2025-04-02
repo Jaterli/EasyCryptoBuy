@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import associate_wallet, check_wallet
+from .views import register_wallet, check_wallet
 
 urlpatterns = [
-    path('api/associate-wallet', associate_wallet, name='associate_wallet'),
-    path('api/check-wallet', check_wallet, name='check_wallet'),
+    path('register-wallet', register_wallet, name='register_wallet'),
+    path('check-wallet', check_wallet, name='check_wallet'),
 ]
