@@ -1,46 +1,44 @@
-import { Box, Container, Heading, VStack, Separator } from "@chakra-ui/react";
-import { ConnectWallet } from "./components/ConnectWallet";
-import { WalletInfo } from "./components/WalletInfo";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { Box, Container } from "@chakra-ui/react";
 import { Toaster } from "@/components/ui/toaster";
-import { ColorModeButton, useColorMode } from "@/components/ui/color-mode";
-import { Payment } from "./components/Payment";
-import { ContractBalance } from "./components/ContractBalance";
-
+import { Navbar } from "@/components/Navbar";
+import { InvoiceGenerator } from '@/components/InvoiceGenerator';
+import { Payment } from "@/components/Payment/Payment";
+import { WalletProvider } from "@/context/WalletContext";
+import RequireWallet from '@/components/RequireWallet'; 
+import Home from "./pages/home";
 
 function App() {
-
-  const { colorMode } = useColorMode();
-  
   return (
-    <Box minH="100vh" py={10} px={4}>
-      <Container maxW="container.md">
-        {/* Botón de cambio de modo */}
-        <ColorModeButton _hover={{bg: 'transparent'}} color={colorMode === 'light' ? 'black' : 'white'}/>
-        {/* Título y subtítulo */}
-        <VStack textAlign="center" pb={10} spaceY={4}>
-          <Heading as="h1" size="2xl" fontWeight="bold">
-            Blockchain Payments
-          </Heading>
-          <Heading as="h2" size="md" fontWeight="normal">
-            Plataforma de pagos en criptomonedas
-          </Heading>
-        </VStack>
-
-        {/* Separador */}
-        <Separator className="separator" mb={10} />
-
-        {/* Contenido principal */}
-        <Box>
-          <VStack spaceY={6}>
-            <ConnectWallet />
-            <Payment />            
-            <ContractBalance />
-            <Toaster />
-            <WalletInfo />
-          </VStack>
+    <WalletProvider>
+      <Router>
+        <Navbar />
+        <Box 
+          minH="100vh" 
+          spaceX={0} 
+          py={{ base: 4, md: 10 }} // 4 unidades en móvil, 10 en desktop
+          px={{ base: 0, md: 0 }}   // 0 unidades en móvil, 0 en desktop
+        >
+          <Container 
+            spaceX={0} 
+            px={{ base: 0, md: 4, lg: 8 }} // Padding horizontal responsivo
+            maxW={{ 
+              base: "100%",      // Pantallas pequeñas: ancho completo
+              md: "container.md",// Breakpoint medio
+              lg: "container.lg",// Breakpoint grande
+              xl: "container.xl" // Breakpoint extra grande
+            }}
+          >
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/payments-history" element={<RequireWallet><InvoiceGenerator /></RequireWallet>} />
+              <Route path="/payment" element={<Payment />} />
+            </Routes>
+          </Container>
         </Box>
-      </Container>
-    </Box>
+        <Toaster />
+      </Router>
+    </WalletProvider>
   );
 }
 

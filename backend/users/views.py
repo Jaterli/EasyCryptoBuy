@@ -6,7 +6,7 @@ import json
 import re
 
 @csrf_exempt
-def associate_wallet(request):
+def register_wallet(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)

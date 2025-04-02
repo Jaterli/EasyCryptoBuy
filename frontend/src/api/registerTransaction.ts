@@ -4,7 +4,7 @@ export async function registerTransaction(
     transactionHash: string,
     status: 'verified' | 'failed' | 'pending'
   ) {
-    const response = await fetch('http://localhost:8000/payments/api/register-transaction/', {
+    const response = await fetch('http://localhost:8000/payments/register-transaction/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet_address: walletAddress, amount, transaction_hash: transactionHash, status }),
