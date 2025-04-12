@@ -7,11 +7,13 @@ import { FaEthereum, FaWallet, FaHistory, FaCopy } from "react-icons/fa";
 import WalletAddress from "@/components/TruncatedAddress";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import formatScientificToDecimal from "@/components/formatScientificToDecimal";
 
 interface Transaction {
   transaction_hash: string;
   amount: string;
   created_at: string;
+  token: string;
   status: string;
 }
 
@@ -114,7 +116,7 @@ export default function Home() {
             </CardHeader>
             <CardBody>
               <Text mb={4}>
-                Envía pagos en ETH de forma rápida y segura directamente desde tu wallet.
+                Envía pagos en ETH, USCD, USDT y LINK de forma rápida y segura directamente desde tu wallet.
               </Text>
             </CardBody>
             <CardFooter>
@@ -209,7 +211,7 @@ export default function Home() {
                                 textAlign="right"
                                 pt={{ base: 1, md: 0 }}
                             >
-                                {tx.amount} ETH
+                                {formatScientificToDecimal(tx.amount)} {tx.token}
                             </Text>
                             </Stack>
                             <HStack>

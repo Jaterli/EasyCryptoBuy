@@ -2,11 +2,12 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Box, Container } from "@chakra-ui/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
-import { InvoiceGenerator } from '@/components/InvoiceGenerator';
+import { PaymentHistory } from '@/components/PaymentHistory';
 import { Payment } from "@/components/Payment/Payment";
 import { WalletProvider } from "@/context/WalletContext";
 import RequireWallet from '@/components/RequireWallet'; 
 import Home from "./pages/home";
+import ResettableComponent from "./components/ResettableComponent";
 
 function App() {
   return (
@@ -31,8 +32,8 @@ function App() {
           >
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/payments-history" element={<RequireWallet><InvoiceGenerator /></RequireWallet>} />
-              <Route path="/payment" element={<Payment />} />
+              <Route path="/payments-history" element={<RequireWallet><PaymentHistory /></RequireWallet>} />
+              <Route path="/payment" element={<RequireWallet><ResettableComponent><Payment onReset={() => {}} /></ResettableComponent></RequireWallet>} />
             </Routes>
           </Container>
         </Box>
