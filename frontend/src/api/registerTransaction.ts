@@ -2,7 +2,7 @@ export async function registerTransaction(
     walletAddress: string,
     amount: number,
     transactionHash: string,
-    status: 'verified' | 'failed' | 'pending'
+    status: 'confirmed' | 'failed' | 'pending'
   ) {
     const response = await fetch('http://localhost:8000/payments/register-transaction/', {
       method: 'POST',

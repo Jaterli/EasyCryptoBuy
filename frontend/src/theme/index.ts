@@ -17,7 +17,8 @@ const customTheme = defineConfig({
       "--button-bg-color": "var(--ui-colors-blue-300)",
       "--button-hover-bg-color": "var(--ui-colors-blue-400)",
       "--separator": "#e2e8f0",
-      "--card-bg": "#ebf4ff",
+      "--card-bg-color": "#ebf4ff",
+      "--card-border-color": "var(--ui-colors-blue-200)",      
       "--accent-color": "#6366f1",
       "--success-color": "#38a169",
       "--nav-bg-color": "var(--ui-colors-blue-100)"
@@ -35,7 +36,8 @@ const customTheme = defineConfig({
       "--button-bg-color": "var(--ui-colors-blue-700)",
       "--button-hover-bg-color": "var(--ui-colors-blue-800)",
       "--separator": "#334155",
-      "--card-bg": "#1e293b",
+      "--card-bg-color": "#1e293b",
+      "--card-border-color": "var(--ui-colors-blue-800)",      
       "--accent-color": "#818cf8",
       "--success-color": "#34d399",
       "--nav-bg-color": "var(--ui-colors-blue-900)"
@@ -57,7 +59,7 @@ const customTheme = defineConfig({
       opacity: 0.7
     },
     ".card": {
-      bg: "var(--card-bg)",
+      bg: "var(--card-bg-color)",
       border: "1px solid var(--border-color)",
       borderRadius: "12px",
       p: "24px",
@@ -203,7 +205,9 @@ const customTheme = defineConfig({
         boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.2)"
     },    
     ".chakra-card__root": {
-      borderColor: "var(--nav-bg-color) !important"
+      borderColor: "var(--card-border-color) !important",
+      borderWidth: "1px",
+      borderStyle: "solid",
     }
   }
 });
