@@ -8,6 +8,7 @@ import { WalletProvider } from "@/context/WalletContext";
 import RequireWallet from '@/components/RequireWallet'; 
 import Home from "./pages/home";
 import ResettableComponent from "./components/ResettableComponent";
+import Footer from "@/components/Footer";
 
 function App() {
   return (
@@ -34,9 +35,10 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/payments-history" element={<RequireWallet><PaymentHistory /></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><ResettableComponent><Payment onReset={() => {}} /></ResettableComponent></RequireWallet>} />
-            </Routes>
+            </Routes>            
           </Container>
         </Box>
+        <Footer />        
         <Toaster />
       </Router>
     </WalletProvider>

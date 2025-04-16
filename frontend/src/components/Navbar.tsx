@@ -43,7 +43,6 @@ export function Navbar() {
   const { connectAsync, connectors } = useConnect();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const { open, onOpen, onClose } = useDisclosure();
-  // const [open, setOpen] = useState(false)
   
   // Función para conectar con la primera wallet disponible
   const handleConnect = async () => {
