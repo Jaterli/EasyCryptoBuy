@@ -93,12 +93,7 @@ export default function Home() {
                 ) : (
                 <VStack spaceY={4}>
                     <Text color="gray.500">No hay wallet conectada</Text>
-                    <Button 
-                    colorPalette="blue" 
-                    onClick={() => navigate("/connect-wallet")}
-                    >
-                    Conectar Wallet
-                    </Button>
+                    <Text>Para ver el estado necesitas conectar tu wallet.</Text>
                 </VStack>
                 )}
             </CardBody>
