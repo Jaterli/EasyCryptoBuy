@@ -8,6 +8,7 @@ import { PaymentForm } from "./PaymentForm";
 import { useWallet } from "@/context/WalletContext";
 import WalletAddress from "@/components/TruncatedAddress";
 import TransactionData from "@/components/TransactionData";
+import UserForm from "../UserForm";
 
 
 const CONTRACT_ADDRESSES = {
@@ -88,6 +89,36 @@ export function Payment({ onReset }: PaymentProps) {
       showToast('error', "Error en transacción", writeError.message);
     }
   }, [writeError, showToast]);
+
+  // Regitro de nueva wallet
+  const handleUserRegistration = async (formData: { name: string; email: string }) => {
+    if (!address) return;
+  
+    try {
+      const response = await fetch("http://localhost:8000/users/register-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+          name: formData.name,
+          email: formData.email,
+        }),
+      });
+  
+      const data = await response.json();
+      if (data.success) {
+        showToast("success", "Wallet registrada", data.message);
+        setPaymentCompleted(false);
+        window.location.reload(); // opcional: refrescar para revalidar con WalletContext
+      } else {
+        showToast("error", "Registro fallido", data.message);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error desconocido";
+      showToast("error", "Error en registro", message);
+    }
+  };
+  
 
   // Registro en backend después de confirmación en blockchain
   const registerTransaction = useCallback(async () => {
@@ -240,7 +271,14 @@ export function Payment({ onReset }: PaymentProps) {
         ) : isLoadingState || isApprovePending ? (
           <Spinner size="lg" />
         ) : !isWalletRegistered ? (
-          <Text>Es necesario verificar tu wallet antes de realizar pagos.</Text>
+          <>
+          <Text>
+            Antes de realizar tu primera transacción en nuestra plataforma de pagos onchain, es necesario firmar un mensaje para
+            verificar que eres el propietario de esta wallet. Esto garantiza la seguridad y evita fraudes, permitiéndonos
+            registrar tu dirección de manera segura.
+          </Text>
+          <UserForm onSubmit={handleUserRegistration} />          
+        </>
         ) : paymentCompleted ? (  // Mostrar botón si el pago está completo
           <VStack spaceY={4}>
             <Text color="green.500">¡Pago realizado con éxito!</Text>
