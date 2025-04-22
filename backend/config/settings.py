@@ -161,6 +161,8 @@ DEBUG = os.getenv("DEBUG") == "True"  # Convertir a booleano
 
 WEB3_PROVIDER = os.getenv('WEB3_PROVIDER')
 
+WEB3_WS_PROVIDER = os.getenv('WEB3_WS_PROVIDER')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 PAYMENT_CONTRACT_ADDRESS = os.getenv('PAYMENT_CONTRACT_ADDRESS')

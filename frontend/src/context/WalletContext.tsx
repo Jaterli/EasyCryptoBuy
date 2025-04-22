@@ -3,7 +3,7 @@ import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { toaster } from "@/components/ui/toaster";
 
 interface WalletContextType {
-  address: string | null;
+  address: string | undefined;
   isConnected: boolean;
   isSigned: boolean;
   isWalletRegistered: boolean | null;
@@ -65,7 +65,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ Agregamos este hook para evitar el error en UserForm.tsx
+// Agregamos este hook para evitar el error en UserForm.tsx
 export function useWallet() {
   const context = useContext(WalletContext);
   if (!context) {

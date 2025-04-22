@@ -1,5 +1,5 @@
-import { Button, Input, VStack, Select, createListCollection, Portal } from "@chakra-ui/react";
-// import { useEthPrice } from "./PriceFetcher";
+import { Button, Input, VStack, Select, createListCollection, Portal, Spinner, Box } from "@chakra-ui/react";
+import { useEthPrice } from "./PriceFetcher";
 
 interface PaymentFormProps {
   onSubmit: (amount: string, token: "ETH" | "USDT" | "USDC" | "LINK") => void;
@@ -11,7 +11,7 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ onSubmit, isProcessing, amount, selectedToken, setSelectedToken, setAmount }: PaymentFormProps) {
-  // const { price, loading } = useEthPrice("usd");
+  const { price, loading } = useEthPrice("usd");
 
   const handlePayment = () => {
     if (!amount || isNaN(Number(amount))) {
@@ -67,7 +67,7 @@ export function PaymentForm({ onSubmit, isProcessing, amount, selectedToken, set
         disabled={isProcessing}
       />
       
-      {/* {loading ? <Spinner /> : <Box color="yellow.400" fontSize="sm">1 ETH ≈ {price} USD</Box>} */}
+      {loading ? <Spinner /> : <Box color="yellow.400" fontSize="sm">1 ETH ≈ {price} USD</Box>}
 
       <Button
         marginTop={4}
