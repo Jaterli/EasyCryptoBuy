@@ -1,8 +1,8 @@
-import { createContext, useState, useEffect, useContext, ReactNode } from "react";
+import { createContext, useState, useEffect, ReactNode } from "react";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { toaster } from "@/components/ui/toaster";
 
-interface WalletContextType {
+export interface WalletContextType {
   address: string | undefined;
   isConnected: boolean;
   isSigned: boolean;
@@ -18,7 +18,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { disconnect } = useDisconnect();
-  
+
   const [isSigned, setIsSigned] = useState(false);
   const [isWalletRegistered, setIsWalletRegistered] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +47,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setIsSigned(true);
       return signature;
     } catch (error) {
-      toaster.create({ title: "Firma cancelada. "+error, type: "error", duration: 3000 });
+      toaster.create({
+        title: "Firma cancelada. " + error,
+        type: "error",
+        duration: 3000
+      });
       return null;
     }
   };
@@ -59,17 +63,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <WalletContext.Provider value={{ address, isConnected, isSigned, isWalletRegistered, isLoading, signMessage, disconnectWallet }}>
+    <WalletContext.Provider
+      value={{
+        address,
+        isConnected,
+        isSigned,
+        isWalletRegistered,
+        isLoading,
+        signMessage,
+        disconnectWallet
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );
 }
 
-// Agregamos este hook para evitar el error en UserForm.tsx
-export function useWallet() {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error("useWallet debe usarse dentro de un WalletProvider");
-  }
-  return context;
-}
+export default WalletContext;
