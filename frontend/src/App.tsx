@@ -4,11 +4,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
 import { PaymentHistory } from '@/components/PaymentHistory';
 import { Payment } from "@/components/Payment/Payment";
-import { WalletProvider } from "@/context/WalletContext";
+import { WalletProvider } from "@/context/WalletProvider";
 import RequireWallet from '@/components/RequireWallet'; 
 import Home from "./pages/home";
 import ResettableComponent from "./components/ResettableComponent";
+import RegisterWalletPage from "@/pages/RegisterWalletPage";
 import Footer from "@/components/Footer";
+
 
 function App() {
   return (
@@ -35,6 +37,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/payments-history" element={<RequireWallet><PaymentHistory /></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><ResettableComponent><Payment onReset={() => {}} /></ResettableComponent></RequireWallet>} />
+              <Route path="/register" element={<RequireWallet><RegisterWalletPage /></RequireWallet>} />              
             </Routes>            
           </Container>
         </Box>

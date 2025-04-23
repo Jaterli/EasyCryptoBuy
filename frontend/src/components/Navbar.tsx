@@ -15,7 +15,7 @@ import {
   useDisclosure
 } from "@chakra-ui/react";
 
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/context/useWallet";
 import { useConnect } from "wagmi";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { NavLink } from "react-router-dom";
