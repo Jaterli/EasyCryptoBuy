@@ -1,5 +1,5 @@
 import { Button, Text, Box, Spinner, Flex } from "@chakra-ui/react";
-import { useWallet } from "@/context/useWallet";
+import { useWallet } from "@/shared/context/useWallet";
 import UserForm from "./UserForm";
 
 export function ConnectWallet() {
@@ -36,7 +36,7 @@ export function ConnectWallet() {
           )}
 
           <Flex direction="row" gap={4} mt={4}>
-            <Button colorScheme="red" onClick={disconnectWallet}>
+            <Button colorPalette="red" onClick={disconnectWallet}>
               Desconectar
             </Button>
           </Flex>

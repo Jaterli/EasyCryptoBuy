@@ -3,9 +3,9 @@ import { Text, Heading, Stack, HStack, VStack, Icon, Badge, Card, CardBody, Card
 import { FaHistory, FaCopy } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import formatScientificToDecimal from "@/components/formatScientificToDecimal";
-import { toaster } from "@/components/ui/toaster";
-import WalletAddress from "@/components/TruncatedAddress";
+import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
+import { toaster } from "@/shared/components/ui/toaster";
+import WalletAddress from "@/shared/components/TruncatedAddress";
 
 interface TransactionProp {
     transaction_hash: string;

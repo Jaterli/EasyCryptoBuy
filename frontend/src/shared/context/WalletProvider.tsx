@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
-import { toaster } from "@/components/ui/toaster";
+import { toaster } from "@/shared/components/ui/toaster";
 
 export interface WalletContextType {
   address: string | undefined;
@@ -8,6 +8,7 @@ export interface WalletContextType {
   isSigned: boolean;
   isWalletRegistered: boolean | null;
   isLoading: boolean;
+  refreshWalletStatus: () => void; 
   signMessage: () => Promise<string | null>;
   disconnectWallet: () => void;
 }
@@ -25,6 +26,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (address) {
+      // siempre resetear estado firmado si la wallet cambia o se reconecta
+      setIsSigned(false);
       setIsLoading(true);
       fetch(`http://localhost:8000/users/check-wallet?wallet_address=${address}`)
         .then((res) => res.json())
@@ -38,6 +41,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setIsSigned(false);
     }
   }, [address]);
+
+  const refreshWalletStatus = () => {
+    if (!address) return;
+    setIsLoading(true);
+    fetch(`http://localhost:8000/users/check-wallet?wallet_address=${address}`)
+      .then(res => res.json())
+      .then(data => {
+        setIsWalletRegistered(data.isRegistered);
+      })
+      .catch(() => setIsWalletRegistered(false))
+      .finally(() => setIsLoading(false));
+  }
+  
 
   const signMessage = async () => {
     if (!address) return null;
@@ -70,6 +86,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         isSigned,
         isWalletRegistered,
         isLoading,
+        refreshWalletStatus,
         signMessage,
         disconnectWallet
       }}
