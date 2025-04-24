@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { Box, Text, Button, Heading, Spinner, Stack, HStack, VStack, Icon, Badge, Card, CardBody, CardHeader, CardFooter, SimpleGrid, IconButton } from "@chakra-ui/react";
-import { toaster } from "@/components/ui/toaster";
+import { toaster } from "@/shared/components/ui/toaster";
 import { useNavigate } from "react-router-dom";
 import { FaEthereum, FaWallet, FaHistory, FaCopy } from "react-icons/fa";
-import WalletAddress from "@/components/TruncatedAddress";
+import WalletAddress from "@/shared/components/TruncatedAddress";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import formatScientificToDecimal from "@/components/formatScientificToDecimal";
+import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
 
 interface Transaction {
   transaction_hash: string;

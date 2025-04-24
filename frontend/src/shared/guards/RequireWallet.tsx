@@ -1,6 +1,5 @@
-// RequireWallet.tsx
+import { useWallet } from '@/shared/context/useWallet';
 import React from 'react';
-import { useWallet } from '../context/useWallet';
 
 interface RequireWalletProps {
   children: React.ReactNode;

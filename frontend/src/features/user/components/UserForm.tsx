@@ -55,7 +55,7 @@ const UserForm = ({ onSubmit }: UserFormProps) => {
           {/* Botones de envío y cancelación */}
           <Flex justify="center" gap={4}>
             <Button type="submit" colorPalette="blue" size="lg" px={8}>
-              Firmar
+              Registrar
             </Button>
           </Flex>
         </Stack>

@@ -1,14 +1,14 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useState, useEffect, useCallback } from "react";
 import { Box, VStack, Text, Spinner, Heading, HStack, Button } from "@chakra-ui/react";
-import { toaster } from "@/components/ui/toaster";
+import { toaster } from "@/shared/components/ui/toaster";
 import ContractABI from "@/abis/PAYMENT_CONTRACT_ABI.json";
 import StandardERC20ABI from "@/abis/ERC20.json";
 import { PaymentForm } from "./PaymentForm";
-import { useWallet } from "@/context/useWallet";
-import WalletAddress from "@/components/TruncatedAddress";
-import TransactionData from "@/components/TransactionData";
+import { useWallet } from "@/shared/context/useWallet";
+import WalletAddress from "@/shared/components/TruncatedAddress";
 import { useNavigate } from "react-router-dom";
+import TransactionData from "../components/TransactionData";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -236,18 +236,18 @@ export function Payment({ onReset }: PaymentProps) {
           </HStack>
         )}
 
-        {!address ? (
+        {!address ? ( // Esto debería estar protegido por el guard
           <Text color="gray.500">Conecta tu wallet para continuar.</Text>
         ) : isLoadingState || isApprovePending ? (
           <Spinner size="lg" />
-        ) : !isWalletRegistered ? (
+        ) : !isWalletRegistered ? ( // Esto debería estar protegido por el guard
           <VStack spaceY={4}>
           <Text>
-            Antes de realizar tu primera transacción en nuestra plataforma de pagos onchain, es necesario firmar un mensaje para
-            verificar que eres el propietario de esta wallet. Esto garantiza la seguridad y evita fraudes, permitiéndonos
+            Antes de realizar tu primera transacción en nuestra plataforma de pagos onchain, es necesario registrar la wallet y firmar un mensaje para
+            verificar que eres el propietario. Esto garantiza la seguridad y evita fraudes, permitiéndonos
             registrar tu dirección de manera segura.
           </Text>
-          <Button colorPalette="blue" onClick={() => navigate("/register")}>
+          <Button colorPalette="blue" onClick={() => navigate("/register-wallet")}>
             Ir al registro de wallet
           </Button>          
           </VStack>

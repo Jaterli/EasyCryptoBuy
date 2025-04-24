@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Box, Flex, Table, Text, IconButton, Select, Portal, createListCollection } from '@chakra-ui/react';
-import { toaster } from "@/components/ui/toaster";
+import { toaster } from "@/shared/components/ui/toaster";
 import { FaCopy, FaFileInvoice } from 'react-icons/fa';
 import { useAccount } from 'wagmi';
-import WalletAddress from './TruncatedAddress';
-import formatScientificToDecimal from "@/components/formatScientificToDecimal";
+import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
+import WalletAddress from '@/shared/components/TruncatedAddress';
 
 interface Transaction {
   id: number;

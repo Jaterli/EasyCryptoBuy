@@ -2,11 +2,11 @@ import App from './App.tsx';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
-import { config } from './config/wagmi.ts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider } from '@chakra-ui/react';
-import { ColorModeProvider } from "@/components/ui/color-mode";
-import { customSystem } from "./theme"; // Nueva importación
+import { ColorModeProvider } from "@/shared/components/ui/color-mode.tsx";
+import { customSystem } from '@/theme/index.ts';
+import { config } from '@/config/wagmi.ts';
 
 const queryClient = new QueryClient();
 

@@ -15,9 +15,9 @@ import {
   useDisclosure
 } from "@chakra-ui/react";
 
-import { useWallet } from "@/context/useWallet";
+import { useWallet } from "@/shared/context/useWallet";
 import { useConnect } from "wagmi";
-import { ColorModeButton } from "@/components/ui/color-mode";
+import { ColorModeButton } from "@/shared/components/ui/color-mode";
 import { NavLink } from "react-router-dom";
 
 // Icono de hamburguesa SVG
