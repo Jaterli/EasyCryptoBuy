@@ -15,21 +15,26 @@ const queryClient = new QueryClient();
 export const AppRouterSelector = () => {
   const location = useLocation();
   const isCompanyPath = location.pathname.startsWith("/company");
-  return isCompanyPath ? <AppCompany /> : <AppUser />;
+  
+  return isCompanyPath ? (
+    <AppCompany />
+  ) : (
+    <WagmiProvider config={config}>
+      <AppUser />
+    </WagmiProvider>
+  );
 };
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <WagmiProvider config={config}> {/* Valorar si es necesario que envuelva a AppCompany */}
-      <QueryClientProvider client={queryClient}>
-        <ChakraProvider value={customSystem}>
-          <ColorModeProvider>
-            <BrowserRouter>
-              <AppRouterSelector />
-            </BrowserRouter>
-          </ColorModeProvider>
-        </ChakraProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <ChakraProvider value={customSystem}>
+        <ColorModeProvider>
+          <BrowserRouter>
+            <AppRouterSelector />
+          </BrowserRouter>
+        </ColorModeProvider>
+      </ChakraProvider>
+    </QueryClientProvider>
   </StrictMode>
 );

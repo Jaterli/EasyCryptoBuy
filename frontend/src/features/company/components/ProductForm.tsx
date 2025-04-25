@@ -17,15 +17,15 @@ interface Props {
 
 export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }) => {
   const [product, setProduct] = useState<Product>(
-    initialData || { id: '', name: '', description: '', amountUSD: 0, quantity: 0 }
+    initialData || { id: '', name: '', description: '', amount_usd: 0, quantity: 0 }
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
   };
 
-  const handleNumberChange = (name: keyof Product, value: string) => {
-    setProduct({ ...product, [name]: parseFloat(value) || 0 });
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProduct({ ...product, [e.target.name]: parseFloat(e.target.value) });
   };
 
   const handleSubmit = () => {
@@ -58,25 +58,27 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
         <Field.Root>
           <Field.Label>Monto (USD)</Field.Label>
           <NumberInput.Root
-            value={product.amountUSD.toString()}
-            onValueChange={(details) => handleNumberChange("amountUSD", details.value)}
+            value={product.amount_usd.toString()}
+            onChange={handleNumberChange}
             min={0}
-            step={0.01}
+            step={1.00}
             formatOptions={{
               style: "currency",
-              currency: "USD"
+              currency: "USD",
+              currencyDisplay: "code",
+              currencySign: "accounting",
             }}
           >
             <NumberInput.Control />
-            <NumberInput.Input name="amountUSD" />
+            <NumberInput.Input name="amount_usd" />
           </NumberInput.Root>
-        </Field.Root>
-
+        </Field.Root>        
+        
         <Field.Root>
           <Field.Label>Cantidad</Field.Label>
           <NumberInput.Root
             value={product.quantity.toString()}
-            onValueChange={(details) => handleNumberChange("quantity", details.value)}
+            onChange={handleNumberChange}
             min={0}
           >
             <NumberInput.Control />
@@ -85,7 +87,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
         </Field.Root>
 
         <Stack direction="row" spaceX={4} mt={4}>
-          <Button colorScheme="blue" onClick={handleSubmit}>
+          <Button colorPalette="blue" onClick={handleSubmit}>
             {initialData ? "Actualizar" : "Guardar"}
           </Button>
           <Button variant="ghost" onClick={onCancel}>

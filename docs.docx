@@ -1,0 +1,24 @@
+Propuesta de arquitectura organizada para backend
+? 1. App accounts/ (nueva)
+Responsable de toda la autenticación centralizada y lógica de usuarios Django, incluyendo:
+/admin-login/ (verifica is_staff)
+/api/token/ si usas JWT (opcional)
+/me/ (usuario actual)
+Lógica de login/logout/email/password
+Aquí vivirá el modelo User, permisos, autenticaciones...
+?? No guarda wallets, ni lógica de negocio del cliente o empresa.
+
+? 2. App users/ (ya existente)
+Mantiene:
+register_wallet
+check_wallet
+UserProfile (puedes moverlo aquí si aún no lo tienes)
+Dashboard e historial de pagos del cliente
+
+? 3. App companies/ (nueva)
+Modelos: Product, Sale, CompanyProfile?
+Endpoints: /products/, /sales/
+Solo accesibles con is_staff (o permisos/grupos)
+
+? Refactor sugerido en tu proyecto
+

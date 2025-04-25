@@ -1,22 +1,34 @@
+import { API_PATHS } from "@/config/paths";
+
 export interface LoginResponse {
-    token: string;
-    is_staff: boolean;
-  }
-  
-  export async function adminLogin(username: string, password: string): Promise<LoginResponse> {
-    const res = await fetch("/api/admin-login/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password }),
-    });
-  
-    if (!res.ok) {
-      throw new Error("Login fallido o sin permisos de administrador");
+  token: string;
+  refresh: string;
+  username: string;
+  is_staff: boolean;
+}
+
+export async function adminLogin(username: string, password: string): Promise<LoginResponse> {
+  const res = await fetch(`${API_PATHS.accounts}/admin-login/`, {
+    method: "POST",      
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!res.ok) {
+    // Intentamos obtener el mensaje de error del backend
+    let errorMessage = "Login fallido o sin permisos de administrador";
+    try {
+      const errorData = await res.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch (e) {
+      errorMessage = "Error en el login. "+e;
     }
-  
-    return await res.json();
+    throw new Error(errorMessage);
   }
-  
-  
+
+  return await res.json();
+}
