@@ -1,20 +1,36 @@
+import { authFetch } from "@/features/auth/api/authFetch";
 import { Product } from "../types/Product";
+import { API_PATHS } from "@/config/paths";
 
-let mockProducts: Product[] = [];
+const API_PRODUCTS = `${API_PATHS.company}/products/`;
 
 export async function fetchProducts(): Promise<Product[]> {
-  return new Promise((resolve) => setTimeout(() => resolve(mockProducts), 300));
+  const res = await authFetch(API_PRODUCTS);
+  if (!res.ok) throw new Error("Error al obtener productos");
+  return res.json();
 }
 
-export async function createProduct(product: Product): Promise<void> {
-  mockProducts.push({ ...product, id: crypto.randomUUID() });
+
+export async function createProduct(product: Omit<Product, "id">): Promise<void> {
+  const res = await authFetch(API_PRODUCTS, {
+    method: "POST",
+    body: JSON.stringify(product),
+  });
+  if (!res.ok) throw new Error("Error al crear producto");
 }
 
-export async function updateProduct(id: string, updated: Product): Promise<void> {
-  mockProducts = mockProducts.map((p) => (p.id === id ? { ...updated, id } : p));
+export async function updateProduct(id: string, product: Product): Promise<void> {
+  const res = await authFetch(`${API_PRODUCTS}${id}/`, {
+    method: "PUT",
+    body: JSON.stringify(product),
+  });
+  
+  if (!res.ok) throw new Error("Error al actualizar producto");
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  mockProducts = mockProducts.filter((p) => p.id !== id);
+  const res = await authFetch(`${API_PRODUCTS}${id}/`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar producto");
 }
-

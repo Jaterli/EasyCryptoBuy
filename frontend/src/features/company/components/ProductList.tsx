@@ -6,6 +6,7 @@ import {
   Stack,
   Table,
   useDisclosure,
+  Text,
 } from "@chakra-ui/react";
 import { Product } from "../types/Product";
 import * as api from "../api/products";
@@ -65,52 +66,58 @@ export const ProductList: React.FC = () => {
           Nuevo Producto
         </Button>
 
-        <Table.Root size="md" variant="outline" striped interactive>
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader>Nombre</Table.ColumnHeader>
-              <Table.ColumnHeader>Descripción</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Monto (USD)</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Cantidad</Table.ColumnHeader>
-              <Table.ColumnHeader>Acciones</Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-          
-          <Table.Body>
-            {products.map((product) => (
-              <Table.Row key={product.id}>
-                <Table.Cell fontWeight="medium">{product.name}</Table.Cell>
-                <Table.Cell>{product.description}</Table.Cell>
-                <Table.Cell textAlign="end">
-                  {product.amountUSD.toLocaleString('en-US', {
-                    style: 'currency',
-                    currency: 'USD'
-                  })}
-                </Table.Cell>
-                <Table.Cell textAlign="end">{product.quantity}</Table.Cell>
-                <Table.Cell>
-                  <Stack direction="row" spaceX={2}>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => { setEditingProduct(product); onOpen(); }}
-                    >
-                      Editar
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      colorScheme="red" 
-                      variant="outline"
-                      onClick={() => handleDelete(product.id)}
-                    >
-                      Eliminar
-                    </Button>
-                  </Stack>
-                </Table.Cell>
+        {products.length === 0 ? (
+          <Text fontSize="lg" color="gray.500" textAlign="center" py={10}>
+            No se han encontrado productos. Crea uno nuevo para empezar.
+          </Text>
+        ) : (
+          <Table.Root size="md" variant="outline" striped interactive>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Nombre</Table.ColumnHeader>
+                <Table.ColumnHeader>Descripción</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="end">Monto (USD)</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="end">Cantidad</Table.ColumnHeader>
+                <Table.ColumnHeader>Acciones</Table.ColumnHeader>
               </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+            </Table.Header>
+            
+            <Table.Body>
+              {products.map((product) => (
+                <Table.Row key={product.id}>
+                  <Table.Cell fontWeight="medium">{product.name}</Table.Cell>
+                  <Table.Cell>{product.description}</Table.Cell>
+                  <Table.Cell textAlign="end">
+                    {product.amount_usd.toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD'
+                    })}
+                  </Table.Cell>
+                  <Table.Cell textAlign="end">{product.quantity}</Table.Cell>
+                  <Table.Cell>
+                    <Stack direction="row" spaceX={2}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => { setEditingProduct(product); onOpen(); }}
+                      >
+                        Editar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        colorPalette="red" 
+                        variant="outline"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        Eliminar
+                      </Button>
+                    </Stack>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+        )}
       </Stack>
     </Box>
   );

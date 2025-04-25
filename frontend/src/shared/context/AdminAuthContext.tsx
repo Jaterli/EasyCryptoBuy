@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
@@ -12,13 +12,15 @@ const AdminAuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("adminToken"));
 
-  const login = (newToken: string) => {
-    localStorage.setItem("adminToken", newToken);
-    setToken(newToken);
+  const login = (accessToken: string, refreshToken: string) => {
+    localStorage.setItem("adminToken", accessToken);
+    localStorage.setItem("adminRefreshToken", refreshToken);
+    setToken(accessToken);
   };
 
   const logout = () => {
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminRefreshToken");
     setToken(null);
   };
 

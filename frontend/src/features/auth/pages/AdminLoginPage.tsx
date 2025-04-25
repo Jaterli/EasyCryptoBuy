@@ -1,85 +1,109 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Field, Fieldset, Heading, Input, Stack } from "@chakra-ui/react";
+import { Button, Field, Fieldset, Heading, Input, Stack, Box } from "@chakra-ui/react";
+import { useForm } from "react-hook-form";
 import { adminLogin } from "../api/login";
 import { toaster } from "@/shared/components/ui/toaster";
 import { useAdminAuth } from "@/shared/context/AdminAuthContext";
 
+interface LoginFormValues {
+  username: string;
+  password: string;
+}
 
 const AdminLoginPage: React.FC = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>();
+  
   const navigate = useNavigate();
   const { login } = useAdminAuth();
 
-  const handleLogin = async () => {
+  const onSubmit = async (data: LoginFormValues) => {
     try {
-      setLoading(true);
-      const { token, is_staff } = await adminLogin(username, password);
+      const { token, refresh, is_staff } = await adminLogin(data.username, data.password);
+      
       if (is_staff) {
-        login(token);
+        login(token, refresh);
+        toaster.create({
+          title: "Login exitoso",
+          type: "success",
+          description: "Bienvenido al panel de administración",
+          duration: 2000,
+        });
         navigate("/company/products");
       } else {
         throw new Error("Usuario no autorizado");
       }
     } catch (err: unknown) {
-        let errorMessage = "Ocurrió un error desconocido";        
-        if (err instanceof Error) {
-            errorMessage = err.message;
-          } else if (typeof err === 'string') {
-            errorMessage = err;
-        }        
-        toaster.create({ title: "Error de login", type: "error", description: errorMessage, duration: 2000});
-
-    } finally {
-      setLoading(false);
+      let errorMessage = "Ocurrió un error al iniciar sesión";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      toaster.create({ 
+        title: "Error de login", 
+        type: "error", 
+        description: errorMessage, 
+        duration: 2000 
+      });
     }
   };
 
   return (
-    <Fieldset.Root 
-      maxW="md" 
-      mx="auto" 
-      mt={20} 
-      p={6} 
-    >
-      <Stack spaceX={6}>
-        <Fieldset.Legend>
-          <Heading size="md">Login de Administrador</Heading>
-        </Fieldset.Legend>
-        
-        <Field.Root>
-          <Field.Label>Usuario</Field.Label>
-          <Input 
-            value={username} 
-            onChange={(e) => setUsername(e.target.value)} 
-            placeholder="Ingrese su usuario"
-          />
-        </Field.Root>
-        
-        <Field.Root>
-          <Field.Label>Contraseña</Field.Label>
-          <Input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            placeholder="Ingrese su contraseña"
-          />
-        </Field.Root>
-        
-        <Button 
-          colorPalette="blue" 
-          onClick={handleLogin} 
-          loading={loading}
-          loadingText="Iniciando sesión..."
-          width="full"
-        >
-          Iniciar sesión
-        </Button>
-      </Stack>
-    </Fieldset.Root>
+    <Box as="form" onSubmit={handleSubmit(onSubmit)}>
+      <Fieldset.Root maxW="md" mx="auto" mt={20} p={6}>
+        <Stack spaceX={6}>
+          <Fieldset.Legend>
+            <Heading size="md">Login de Administrador</Heading>
+          </Fieldset.Legend>
+          
+          <Fieldset.Content>
+            <Field.Root invalid={!!errors.username}>
+              <Field.Label>Usuario</Field.Label>
+              <Input 
+                placeholder="Ingrese su usuario"
+                {...register("username", { 
+                  required: "El usuario es requerido" 
+                })}
+              />
+              <Field.ErrorText>{errors.username?.message}</Field.ErrorText>
+            </Field.Root>
+          </Fieldset.Content>
+          
+          <Fieldset.Content>
+            <Field.Root invalid={!!errors.password}>
+              <Field.Label>Contraseña</Field.Label>
+              <Input 
+                type="password"
+                placeholder="Ingrese su contraseña"
+                {...register("password", { 
+                  required: "La contraseña es requerida",
+                  minLength: {
+                    value: 6,
+                    message: "La contraseña debe tener al menos 6 caracteres"
+                  }
+                })}
+              />
+              <Field.ErrorText>{errors.password?.message}</Field.ErrorText>
+            </Field.Root>
+          </Fieldset.Content>
+          
+          <Button 
+            type="submit"
+            colorPalette="blue" 
+            loading={isSubmitting}
+            loadingText="Iniciando sesión..."
+            width="full"
+          >
+            Iniciar sesión
+          </Button>
+        </Stack>
+      </Fieldset.Root>
+    </Box>
   );
 };
 

@@ -6,6 +6,8 @@ import RequireAdminAuth from "@/shared/context/RequireAdminAuth";
 import { SalesHistory } from "@/features/company/components/SalesHistory";
 import NotFoundPage from "@/features/company/pages/NotFoundPage";
 import AdminLoginPage from "@/features/auth/pages/AdminLoginPage";
+import { Toaster } from "@/shared/components/ui/toaster";
+import Footer from "@/shared/components/Footer";
 
 export const AppCompany = () => {
   return (
@@ -21,6 +23,8 @@ export const AppCompany = () => {
             </Routes>
           </Container>
         </Box>
+        <Footer />
+        <Toaster />
     </AdminAuthProvider>
   );
 };

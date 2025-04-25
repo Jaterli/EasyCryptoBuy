@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { Box, Container } from "@chakra-ui/react";
 import { Toaster } from "@/shared/components/ui/toaster";
-import { Navbar } from "@/shared/components/Navbar";
+import { Navbar } from "@/features/user/components/Navbar";
 import { WalletProvider } from "@/shared/context/WalletProvider";
 import RegisterWalletPage from "@/features/user/pages/RegisterWalletPage";
 import Footer from "@/shared/components/Footer";
