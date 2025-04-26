@@ -3,6 +3,7 @@ import {
   Button,
   Field,
   Fieldset,
+  Flex,
   Input,
   NumberInput,
   Stack,
@@ -54,43 +55,44 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
             onChange={handleChange} 
           />
         </Field.Root>
-
-        <Field.Root>
-          <Field.Label>Monto (USD)</Field.Label>
-          <NumberInput.Root
-            value={product.amount_usd.toString()}
-            onChange={handleNumberChange}
-            min={0}
-            step={1.00}
-            formatOptions={{
-              style: "currency",
-              currency: "USD",
-              currencyDisplay: "code",
-              currencySign: "accounting",
-            }}
-          >
-            <NumberInput.Control />
-            <NumberInput.Input name="amount_usd" />
-          </NumberInput.Root>
-        </Field.Root>        
-        
-        <Field.Root>
-          <Field.Label>Cantidad</Field.Label>
-          <NumberInput.Root
-            value={product.quantity.toString()}
-            onChange={handleNumberChange}
-            min={0}
-          >
-            <NumberInput.Control />
-            <NumberInput.Input name="quantity" />
-          </NumberInput.Root>
-        </Field.Root>
-
+        <Flex justifyContent="space-between" alignItems="center" mb={4}>
+          <Field.Root>
+            
+            <Field.Label>Monto (USD)</Field.Label>
+            <NumberInput.Root
+              value={product.amount_usd.toString()}
+              onChange={handleNumberChange}
+              min={0}
+              step={1.00}
+              formatOptions={{
+                style: "currency",
+                currency: "USD",
+                currencyDisplay: "code",
+                currencySign: "accounting",
+              }}
+            >
+              <NumberInput.Control />
+              <NumberInput.Input name="amount_usd" />
+            </NumberInput.Root>
+          </Field.Root>        
+          
+          <Field.Root>
+            <Field.Label>Cantidad</Field.Label>
+            <NumberInput.Root
+              value={product.quantity.toString()}
+              onChange={handleNumberChange}
+              min={0}
+            >
+              <NumberInput.Control />
+              <NumberInput.Input name="quantity" />
+            </NumberInput.Root>
+          </Field.Root>
+        </Flex>
         <Stack direction="row" spaceX={4} mt={4}>
           <Button colorPalette="blue" onClick={handleSubmit}>
             {initialData ? "Actualizar" : "Guardar"}
           </Button>
-          <Button variant="ghost" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Cancelar
           </Button>
         </Stack>

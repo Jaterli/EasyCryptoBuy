@@ -3,8 +3,8 @@ import { API_PATHS } from "@/config/paths";
 export interface LoginResponse {
   token: string;
   refresh: string;
-  username: string;
   is_staff: boolean;
+  username: string;
 }
 
 export async function adminLogin(username: string, password: string): Promise<LoginResponse> {
