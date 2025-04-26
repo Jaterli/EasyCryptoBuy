@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Field, Fieldset, Heading, Input, Stack, Box } from "@chakra-ui/react";
+import { Button, Field, Fieldset, Input, Stack, Box } from "@chakra-ui/react";
 import { useForm } from "react-hook-form";
 import { adminLogin } from "../api/login";
 import { toaster } from "@/shared/components/ui/toaster";
@@ -23,10 +23,10 @@ const AdminLoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const { token, refresh, is_staff } = await adminLogin(data.username, data.password);
+      const { token, refresh, is_staff, username } = await adminLogin(data.username, data.password);
       
       if (is_staff) {
-        login(token, refresh);
+        login(token, refresh, username);
         toaster.create({
           title: "Login exitoso",
           type: "success",
@@ -55,12 +55,13 @@ const AdminLoginPage: React.FC = () => {
 
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
-      <Fieldset.Root maxW="md" mx="auto" mt={20} p={6}>
-        <Stack spaceX={6}>
-          <Fieldset.Legend>
-            <Heading size="md">Login de Administrador</Heading>
-          </Fieldset.Legend>
-          
+      <Fieldset.Root size="lg" maxW="md" mx="auto" mt={20} p={6}>
+        <Stack>
+          <Fieldset.Legend>Login de administrador</Fieldset.Legend>
+          <Fieldset.HelperText>
+            Por favor, ingresa tu usuario y contraseña.
+          </Fieldset.HelperText>
+        </Stack>
           <Fieldset.Content>
             <Field.Root invalid={!!errors.username}>
               <Field.Label>Usuario</Field.Label>
@@ -101,7 +102,6 @@ const AdminLoginPage: React.FC = () => {
           >
             Iniciar sesión
           </Button>
-        </Stack>
       </Fieldset.Root>
     </Box>
   );

@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
-import { Box, Container } from "@chakra-ui/react";
+import { Box, Container, useBreakpointValue } from "@chakra-ui/react";
 import { Toaster } from "@/shared/components/ui/toaster";
-import { Navbar } from "@/features/user/components/Navbar";
+import { Navbar } from "@/features/user/components/NavbarUser";
 import { WalletProvider } from "@/shared/context/WalletProvider";
 import RegisterWalletPage from "@/features/user/pages/RegisterWalletPage";
 import Footer from "@/shared/components/Footer";
@@ -16,10 +16,11 @@ import RequireRegistration from "@/shared/guards/RequireRegistration";
 import NotFoundPage from "@/features/user/pages/NotFoundPage";
 
 export const AppUser = () => {
+  const minHeight = useBreakpointValue({ base: "100vh", md: "auto" });
   return (
     <WalletProvider>
         <Navbar />
-        <Box minH="100vh" py={{ base: 4, md: 10 }}>
+        <Box minH={minHeight} py={{ base: 4, md: 10 }}>
           <Container px={{ base: 0, md: 4, lg: 8 }} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
             <Routes>
               <Route path="/dashboard" element={<Home />} />
