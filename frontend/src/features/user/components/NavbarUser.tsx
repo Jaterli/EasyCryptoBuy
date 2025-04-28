@@ -99,7 +99,7 @@ export function Navbar() {
       boxShadow="md"
     >
       <Flex align="center">
-        <Box fontSize="xl" fontWeight="500">
+        <Box fontSize="xl" fontWeight="bold">
           <NavLink to="/dashboard">
             Blockchain Payments
           </NavLink>

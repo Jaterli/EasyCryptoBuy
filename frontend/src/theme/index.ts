@@ -15,7 +15,7 @@ const customTheme = defineConfig({
       "--focus-shadow-color": "rgba(90, 103, 216, 0.2)",
       "--error-color": "#e53e3e",
       "--button-bg-color": "var(--ui-colors-blue-300)",
-      "--button-hover-bg-color": "var(--ui-colors-blue-400)",
+      "--button-hover-bg-color": "var(--ui-colors-blue-300)",
       "--separator": "#e2e8f0",
       "--card-bg-color": "#ebf4ff",
       "--card-border-color": "var(--ui-colors-blue-200)",      
@@ -34,7 +34,7 @@ const customTheme = defineConfig({
       "--focus-shadow-color": "rgba(129, 140, 248, 0.3)",
       "--error-color": "#f87171",
       "--button-bg-color": "var(--ui-colors-blue-700)",
-      "--button-hover-bg-color": "var(--ui-colors-blue-800)",
+      "--button-hover-bg-color": "var(--ui-colors-blue-900)",
       "--separator": "#334155",
       "--card-bg-color": "#1e293b",
       "--card-border-color": "var(--ui-colors-blue-800)",      
@@ -158,7 +158,7 @@ const customTheme = defineConfig({
         }
       }
     },
-    ".payments": {
+    "table": {
       width: "100%",
       borderCollapse: "separate",
       borderSpacing: "0",
@@ -188,8 +188,16 @@ const customTheme = defineConfig({
       "& td": {
         py: "1rem",
         verticalAlign: "middle"
-      }
+      },
     },
+
+    "[class^='chakra-checkbox']": {
+      borderColor: {
+        base: "var(--separator)",
+        _dark: "var(--border-color)"
+      },
+    },
+
     "nav a button.chakra-button, .chakra-drawer__body a button": {
       bgColor: "var(--button-bg-color)",
       color: {

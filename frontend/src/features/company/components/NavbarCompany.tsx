@@ -59,8 +59,12 @@ export function NavbarCompany() {
 
     const renderNavItems = () => (
         <>
-            <NavButton to="/company/products">Productos</NavButton>
-            <NavButton to="/company/sales">Ventas</NavButton>
+            {username && (
+                <>
+                    <NavButton to="/company/products">Productos</NavButton>
+                    <NavButton to="/company/sales">Ventas</NavButton>
+                </>
+            )}
             <ColorModeButton marginLeft={2} />
         </>
     );
@@ -78,7 +82,6 @@ export function NavbarCompany() {
                     <Avatar.Root variant="solid" size="sm">
                         <Avatar.Fallback name={username ? username : "Desconocido"} />
                     </Avatar.Root>
- 
                 </HStack>
             </Menu.Trigger>
             <Portal>
@@ -106,10 +109,15 @@ export function NavbarCompany() {
     );
 
     return (
-        <Box as="nav" px={6} py={4} boxShadow="md">
+        <Box 
+            as="nav" 
+            px={6} 
+            py={4} 
+            boxShadow="md"
+        >
             <Flex align="center">
                 <Box fontSize="xl" fontWeight="bold">
-                    <NavLink to="/company/products">
+                    <NavLink to={username ? "/company/products" : "/"}>
                         Blockchain Admin
                     </NavLink>
                 </Box>
@@ -145,29 +153,30 @@ export function NavbarCompany() {
                             <Portal>
                                 <Drawer.Backdrop />
                                 <Drawer.Positioner>
-                                    <DrawerContent bg="bg.surface" boxShadow="lg">
+                                    <DrawerContent bg={{ _dark: "blue.900", base: "blue.100" }}>
                                         <Drawer.Header>
-                                            <Drawer.Title>Blockchain Admin</Drawer.Title>
-                                            {username && (
-                                                <Text fontSize="sm" mt={1} color="fg.subtle">
-                                                    Bienvenido, {username}
-                                                </Text>
-                                            )}
+                                        <Drawer.Title>Blockchain Admin</Drawer.Title>
                                         </Drawer.Header>
 
                                         <DrawerBody>
                                             <VStack
-                                                separator={<StackSeparator borderColor="border.subtle" />}
+                                                separator={<StackSeparator borderColor="gray.200" />}
                                                 spaceY={4}
                                                 align="stretch"
                                             >
-                                                <NavButton to="/company/products">Productos</NavButton>
-                                                <NavButton to="/company/sales">Ventas</NavButton>
-
-                                                <Button w="full" colorPalette="red" onClick={handleLogout}>
-                                                    Cerrar sesión
-                                                </Button>
-
+                                                {username && (
+                                                    <>
+                                                        <NavButton to="/company/products">Productos</NavButton>
+                                                        <NavButton to="/company/sales">Ventas</NavButton>
+                                                        <Button 
+                                                            w="full" 
+                                                            colorPalette="red" 
+                                                            onClick={handleLogout}
+                                                        >
+                                                            Cerrar sesión
+                                                        </Button>
+                                                    </>
+                                                )}
                                                 <Flex justify="center">
                                                     <ColorModeButton />
                                                 </Flex>

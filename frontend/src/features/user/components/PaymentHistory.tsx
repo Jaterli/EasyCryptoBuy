@@ -141,6 +141,7 @@ export function PaymentHistory() {
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
                 size="sm"
+                variant="ghost"
               >
                 ←
               </IconButton>
@@ -154,6 +155,7 @@ export function PaymentHistory() {
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 size="sm"
+                variant="ghost"
               >
                 →
               </IconButton>
