@@ -46,7 +46,12 @@ export async function authFetch(
         },
       });
     } catch (err) {
-      console.error("Refresh fallido, cerrando sesión", err);
+      console.error("Refresh fallido o sesión caducada, cerrando sesión", err);
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminRefreshToken");
+      localStorage.removeItem("adminUsername");
+    
+      window.location.href = "./admin-login";       
       throw err;
     }
   }

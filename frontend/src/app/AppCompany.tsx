@@ -16,8 +16,8 @@ export const AppCompany = () => {
   return (
     <AdminAuthProvider>
       <NavbarCompany />
-        <Box minH={minHeight} p={6}>
-          <Container maxW="container.lg">
+        <Box minH={minHeight} py={{ base: 4, md: 10 }}>
+          <Container px={{ base: 0, md: 4, lg: 8 }} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
             <Routes>
               <Route path="/company/admin-login" element={<AdminLoginPage />} /> 
               <Route path="/company/products" element={<RequireAdminAuth><ProductList /></RequireAdminAuth>} />

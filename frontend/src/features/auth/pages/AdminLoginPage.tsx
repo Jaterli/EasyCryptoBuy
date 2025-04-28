@@ -31,7 +31,7 @@ const AdminLoginPage: React.FC = () => {
           title: "Login exitoso",
           type: "success",
           description: "Bienvenido al panel de administración",
-          duration: 2000,
+          duration: 3000,
         });
         navigate("/company/products");
       } else {
