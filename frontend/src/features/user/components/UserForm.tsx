@@ -18,7 +18,7 @@ const UserForm = ({ onSubmit }: UserFormProps) => {
   } = useForm<FormValues>();
 
   return (
-    <Box as="form" onSubmit={handleSubmit(onSubmit)} className="user-form">
+    <Box as="form" onSubmit={handleSubmit(onSubmit)} className="form">
       <Fieldset.Root size="lg" maxW="md">
         <Stack spaceY={3}>
           {/* Campo para el nombre */}

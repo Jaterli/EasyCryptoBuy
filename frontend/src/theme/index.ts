@@ -28,7 +28,7 @@ const customTheme = defineConfig({
       "--bg-color": "#121826",
       "--bg-color-secondary": "var(--ui-colors-blue-700)",
       "--text-color": "#f8fafc",
-      "--border-color": "#475569",
+      "--border-color": "rgb(169, 169, 169)",
       "--hover-border-color": "#64748b",
       "--focus-border-color": "#818cf8",
       "--focus-shadow-color": "rgba(129, 140, 248, 0.3)",
@@ -73,7 +73,7 @@ const customTheme = defineConfig({
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
       }
     },
-    ".user-form": {
+    ".form": {
       maxWidth: "100%",
       padding: "1.5rem",
       margin: "0 auto",
@@ -116,7 +116,7 @@ const customTheme = defineConfig({
         color: "var(--text-color)",
         border: "2px solid var(--border-color)",
         borderRadius: "8px",
-        padding: "0.75rem",
+        // padding: "0.75rem",
         transition: "all 0.2s ease",
         
         _hover: {
@@ -146,18 +146,19 @@ const customTheme = defineConfig({
         marginTop: "0.25rem"
       },
 
-      "& button[type='submit']": {
-        bg: "var(--button-bg-color)",
-        color: "white",
-        _hover: {
-          bg: "var(--button-hover-bg-color)",
-          transform: "translateY(-1px)"
-        },
-        _active: {
-          transform: "translateY(0)"
-        }
-      }
-    },
+    //   "& button[type='submit']": {
+    //     bg: "var(--button-bg-color)",
+    //     color: "white",
+    //     _hover: {
+    //       bg: "var(--button-hover-bg-color)",
+    //       transform: "translateY(-1px)"
+    //     },
+    //     _active: {
+    //       transform: "translateY(0)"
+    //     }
+    //   }
+      },
+
     "table": {
       width: "100%",
       borderCollapse: "separate",

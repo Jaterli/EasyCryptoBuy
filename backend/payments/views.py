@@ -2,12 +2,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from eth_account.messages import encode_defunct
-from eth_account import Account
 import json
 from .utils.formatters import format_scientific_to_decimal
-from .models import Transaction
-from .services.coingecko import get_eth_price_in_fiat
+from .models import Transaction, Cart, CartItem
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.shortcuts import get_object_or_404
@@ -16,10 +13,18 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.shortcuts import get_list_or_404
 import os
-from web3 import Web3
 import logging
 from django.conf import settings
 from django.views.decorators.http import require_GET
+from web3 import Web3
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from users.models import UserProfile
+from .serializers import CartSerializer
+
+
 
 @csrf_exempt
 def verify_signature(request):
@@ -172,15 +177,6 @@ def register_transaction(request):
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
     
-def eth_to_fiat(request):
-    currency = request.GET.get("currency", "usd").lower()
-    price = get_eth_price_in_fiat(currency)
-    if price is not None:
-        return JsonResponse({"success": True, "currency": currency, "price": price})
-    else:
-        return JsonResponse({"success": False, "message": "Error al obtener precio"}, status=500)
-
-
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)
     response = HttpResponse(content_type='application/pdf')
@@ -282,3 +278,53 @@ def transaction_details(request):
         "success": True,
         "transaction": data
     })
+
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_cart(request, wallet_address):
+    wallet = wallet_address
+    if not wallet:
+        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        profile = UserProfile.objects.get(wallet_address=wallet)
+        cart, _ = Cart.objects.get_or_create(user=profile)
+        serializer = CartSerializer(cart)
+        return Response(serializer.data)
+    except UserProfile.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def save_cart(request):
+    wallet = request.data.get("wallet")
+    if not wallet:
+        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        profile = UserProfile.objects.get(wallet_address=wallet)
+        cart, _ = Cart.objects.get_or_create(user=profile)
+        serializer = CartSerializer(cart, data=request.data, partial=False)
+        if serializer.is_valid():
+            serializer.save(user=profile)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except UserProfile.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
+def clear_cart(request, wallet_address):
+    wallet = wallet_address
+    if not wallet:
+        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        profile = UserProfile.objects.get(wallet_address=wallet)
+        CartItem.objects.filter(cart__user=profile).delete()
+        return Response({"success": True, "message": "Carrito limpiado"})
+    except UserProfile.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)

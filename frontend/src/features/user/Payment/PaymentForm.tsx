@@ -1,84 +1,128 @@
-import { Button, Input, VStack, Select, createListCollection, Portal, Spinner, Box } from "@chakra-ui/react";
-import { useEthPrice } from "./PriceFetcher";
+import { 
+  Button, 
+  Input, 
+  VStack, 
+  Box, 
+  Text,
+  Field
+} from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import { useTokenPrices } from "@/shared/hooks/useTokenPrices";
+import { useCart } from "@/features/user/context/CartContext";
+
+// Tipos
+type Token = "USDT" | "USDC" | "ETH" | "LINK";
 
 interface PaymentFormProps {
-  onSubmit: (amount: string, token: "ETH" | "USDT" | "USDC" | "LINK") => void;
+  onSubmit: (amount: string, token: Token) => void;
   isProcessing: boolean;
-  selectedToken: "ETH" | "USDT" | "USDC" | "LINK";
-  setSelectedToken: (token: "ETH" | "USDT" | "USDC" | "LINK") => void;
+  selectedToken: Token;
+  setSelectedToken: (token: Token) => void;
   amount: string;
   setAmount: (amount: string) => void;
 }
 
-export function PaymentForm({ onSubmit, isProcessing, amount, selectedToken, setSelectedToken, setAmount }: PaymentFormProps) {
-  const { price, loading } = useEthPrice("usd");
+const TOKEN_OPTIONS = [
+  { label: "USD Coin (USDC)", value: "USDC" },
+  { label: "Tether (USDT)", value: "USDT" },
+  { label: "Ethereum (ETH)", value: "ETH" },
+  { label: "Chainlink (LINK)", value: "LINK" },
+];
+
+export function PaymentForm({ 
+  onSubmit, 
+  isProcessing, 
+  amount, 
+  selectedToken, 
+  setSelectedToken, 
+  setAmount 
+}: PaymentFormProps) {
+  const { prices: tokenPrices, loading: isTokenLoading } = useTokenPrices();
+  const { cart } = useCart();
+
+  const [totalUSD, setTotalUSD] = useState(0);
+
+  useEffect(() => {
+    const total = cart.reduce((acc, item) => acc + item.product.amount_usd * item.quantity, 0);
+    setTotalUSD(total);
+  }, [cart]);
+
+  useEffect(() => {
+    if (!tokenPrices[selectedToken]) return;
+    const tokenPriceUSD = tokenPrices[selectedToken];
+    const calculatedAmount = (totalUSD / tokenPriceUSD).toFixed(6);
+    setAmount(calculatedAmount);
+  }, [totalUSD, selectedToken, tokenPrices, setAmount]);
 
   const handlePayment = () => {
     if (!amount || isNaN(Number(amount))) {
-      alert("Ingresa un monto válido.");
+      alert("Por favor, introduce un monto válido");
       return;
     }
     onSubmit(amount, selectedToken);
   };
 
-
-  const tokens = createListCollection({
-    items: [
-      { label: "Ethereum (ETH)", value: "ETH" },
-      { label: "Tether (USDT)", value: "USDT" },
-      { label: "USD Coin (USDC)", value: "USDC" },
-      { label: "Chainlink (LINK)", value: "LINK" },
-    ],
-  })
-
   return (
-    <VStack>
-      <Select.Root collection={tokens} value={[selectedToken]}
-        onValueChange={(details) => setSelectedToken(details.value[0] as "ETH" | "USDT" | "USDC" | "LINK")} size="sm" width="320px">
-        <Select.HiddenSelect />
-        <Select.Label>Selecciona un token</Select.Label>
-        <Select.Control>
-          <Select.Trigger>
-            <Select.ValueText placeholder="Selecciona un token" />
-          </Select.Trigger>
-          <Select.IndicatorGroup>
-            <Select.Indicator />
-          </Select.IndicatorGroup>
-        </Select.Control>
-        <Portal>
-          <Select.Positioner>
-            <Select.Content>
-              {tokens.items.map((token) => (
-                <Select.Item item={token} key={token.value}>
-                  {token.label}
-                  <Select.ItemIndicator />
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Positioner>
-        </Portal>
-      </Select.Root>
+    <Box 
+      p={6} 
+      borderRadius="lg" 
+      borderWidth="1px" 
+      boxShadow="md"
+      width="100%"
+      maxW="500px"
+      className="form"
+    >
+      <VStack spaceY={5} align="stretch">
 
-      <Input
-        type="number"
-        placeholder={`Monto en ${selectedToken}`}
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        disabled={isProcessing}
-      />
-      
-      {loading ? <Spinner /> : <Box color="yellow.400" fontSize="sm">1 ETH ≈ {price} USD</Box>}
+        <Field.Root>
+          <Field.Label fontWeight="medium" mb={2} color="gray.600" _dark={{ color: "gray.300" }}>
+            Selecciona un token
+          </Field.Label>
+          <select
+            value={selectedToken}
+            onChange={(e) => setSelectedToken(e.currentTarget.value as Token)}
+            disabled={isProcessing}
+          >
+            {TOKEN_OPTIONS.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+        </Field.Root>
 
-      <Button
-        marginTop={4}
-        colorPalette="blue"
-        onClick={handlePayment}        
-        disabled={isProcessing || !amount}
-        loading={isProcessing}
-        loadingText="Procesando..."
-      >
-        Pagar
-      </Button>
-    </VStack>
+        <Field.Root>
+          <Field.Label fontWeight="medium" mb={2} color="gray.600" _dark={{ color: "gray.300" }}>
+            Total en {selectedToken}
+          </Field.Label>
+          <Input
+            type="number"
+            placeholder={`0.00 ${selectedToken}`}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            readOnly={true}
+            disabled={isProcessing}
+            size="md"
+          />
+        </Field.Root>
+        
+        {!isTokenLoading && tokenPrices[selectedToken] && (
+          <Text fontSize="sm" color="blue.500" textAlign="center">
+            1 USD ≈ {(1 / tokenPrices[selectedToken]).toFixed(6)} {selectedToken}
+          </Text>
+        )}
+
+        <Button
+          colorPalette="blue"
+          onClick={handlePayment}        
+          disabled={isProcessing || !amount}
+          loading={isProcessing}
+          loadingText="Procesando..."
+          size="lg"
+          mt={4}
+          width="100%"
+        >
+          Pagar
+        </Button>
+      </VStack>
+    </Box>
   );
 }

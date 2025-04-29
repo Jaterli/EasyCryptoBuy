@@ -5,4 +5,5 @@ export const API_PATHS = {
   accounts: `${API_BASE}/accounts/api`,
   company: `${API_BASE}/company/api`,
   users: `${API_BASE}/users/api`,
+  payments: `${API_BASE}/payments`,
 };

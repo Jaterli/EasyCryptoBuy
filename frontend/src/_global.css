@@ -57,7 +57,7 @@ nav a[type="button"]{
 }
 
 /* Estilos para el contenedor del formulario */
-.user-form {
+.form {
   max-width: 600px;
   min-width: 500px;
   margin: 0 auto;
@@ -68,18 +68,18 @@ nav a[type="button"]{
 }
 
 /* Estilos para los campos de entrada */
-.user-form .field {
+.form .field {
   margin-bottom: 1rem;
 }
 
-.user-form .field-label {
+.form .field-label {
   /* color: var(--text-color); */
   margin-bottom: 0.5rem;
   font-size: 1rem;
   font-weight: 500;
 }
 
-.user-form .field-input {
+.form .field-input {
   width: 100%;
   padding: 0.5rem;
   background-color: var(--bg-color);
@@ -88,25 +88,25 @@ nav a[type="button"]{
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.user-form .field-input::placeholder {
+.form .field-input::placeholder {
   color: var(--text-color);
 }
 
-.user-form .field-input:hover {
+.form .field-input:hover {
   border-color: var(--hover-border-color);
 }
 
-.user-form .field-input:focus {
+.form .field-input:focus {
   border-color: var(--focus-border-color);
   box-shadow: 0 0 0 3px var(--focus-shadow-color);
   outline: none;
 }
 
-.user-form .field-input--error {
+.form .field-input--error {
   border-color: var(--error-color);
 }
 
-.user-form .field-error {
+.form .field-error {
   color: var(--error-color);
   font-size: 0.75rem;
   margin-top: 0.25rem;
