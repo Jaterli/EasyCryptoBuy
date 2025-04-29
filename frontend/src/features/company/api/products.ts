@@ -1,5 +1,5 @@
 import { authFetch } from "@/features/auth/api/authFetch";
-import { Product } from "../types/Product";
+import { Product } from "../../../shared/types/Product";
 import { API_PATHS } from "@/config/paths";
 
 const API_PRODUCTS = `${API_PATHS.company}/products/`;

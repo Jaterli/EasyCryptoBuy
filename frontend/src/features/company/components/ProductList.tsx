@@ -15,7 +15,7 @@ import {
   Select,
   createListCollection,
 } from "@chakra-ui/react";
-import { Product } from "../types/Product";
+import { Product } from "../../../shared/types/Product";
 import * as api from "../api/products";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
@@ -94,7 +94,7 @@ export const ProductList: React.FC = () => {
             <Dialog.Content>
               <Dialog.Header>
                 <Dialog.Title>
-                  {editingProduct ? "Editar Producto" : "Nuevo Producto"}
+                  Formulario de producto
                 </Dialog.Title>
                 <Dialog.CloseTrigger asChild>
                   <CloseButton size="sm" />

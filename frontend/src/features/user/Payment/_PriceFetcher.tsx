@@ -1,3 +1,4 @@
+import { API_PATHS } from "@/config/paths";
 import { useEffect, useState } from "react";
 
 export function useEthPrice(currency: string = "usd") {
@@ -5,7 +6,7 @@ export function useEthPrice(currency: string = "usd") {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/payments/eth-to-fiat/?currency=${currency}`)
+    fetch(`${API_PATHS.payments}/eth-to-fiat/?currency=${currency}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {

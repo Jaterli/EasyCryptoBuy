@@ -8,7 +8,7 @@ import {
   NumberInput,
   Stack,
 } from "@chakra-ui/react";
-import { Product } from "../types/Product";
+import { Product } from "../../../shared/types/Product";
 
 interface Props {
   initialData?: Product;
@@ -34,9 +34,9 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
   };
 
   return (
-    <Fieldset.Root maxW="md">
-      <Stack spaceX={4}>
-        <Fieldset.Legend fontSize="xl">{initialData ? "Editar Producto" : "Nuevo Producto"}</Fieldset.Legend>
+    <Fieldset.Root maxW="md" className="form">
+      <Stack spaceY={4}>
+        <Fieldset.Legend fontSize="xl" mb="5">{initialData ? "Editar Producto" : "Nuevo Producto"}</Fieldset.Legend>
         
         <Field.Root>
           <Field.Label>Nombre</Field.Label>
@@ -55,7 +55,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
             onChange={handleChange} 
           />
         </Field.Root>
-        <Flex justifyContent="space-between" alignItems="center" mb={4}>
+        <Flex justifyContent="space-between" alignItems="center" gap={4} mb={4}>
           <Field.Root>
             
             <Field.Label>Monto (USD)</Field.Label>

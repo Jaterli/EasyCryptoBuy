@@ -9,6 +9,8 @@ import { useWallet } from "@/shared/context/useWallet";
 import WalletAddress from "@/shared/components/TruncatedAddress";
 import { useNavigate } from "react-router-dom";
 import TransactionData from "../components/TransactionData";
+import { useCart } from "@/features/user/context/CartContext";
+import { API_PATHS } from "@/config/paths";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -46,43 +48,25 @@ interface PaymentProps {
 export function Payment({ onReset }: PaymentProps) {
   const { address } = useAccount();
   const { isWalletRegistered, isLoading: isWalletLoading } = useWallet();
+  const { cart } = useCart();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
   const [transactionData, setTransaction] = useState<TransactionProp | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
+  const [checkingStock, setCheckingStock] = useState(true);
   const navigate = useNavigate();
 
-  const { 
-    data: hash, 
-    writeContract, 
-    isPending: isTransactionPending,
-    error: writeError 
-  } = useWriteContract();
-  
-  const { 
-    data: approveHash,
-    writeContract: writeApprove,
-    isPending: isApprovePending,
-    error: approveError    
-  } = useWriteContract();
-
-  const { 
-    isLoading: isConfirming, 
-    isSuccess: isConfirmed 
-  } = useWaitForTransactionReceipt({ hash });
-
-  const { 
-    isLoading: isApproving,
-    isSuccess: isApproveConfirmed
-  } = useWaitForTransactionReceipt({ hash: approveHash });
+  const { data: hash, writeContract, isPending: isTransactionPending, error: writeError } = useWriteContract();
+  const { data: approveHash, writeContract: writeApprove, isPending: isApprovePending, error: approveError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isApproving, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
 
   const showToast = useCallback((type: 'info' | 'error' | 'success', title: string, message: string) => {
     toaster.create({ title, description: message, type, duration: type === 'error' ? 5000 : 3000 });
   }, []);
 
-
-   // Manejo de errores de transacción
   useEffect(() => {
     if (writeError) {
       setPendingTx(null);
@@ -90,10 +74,27 @@ export function Payment({ onReset }: PaymentProps) {
     }
   }, [writeError, showToast]);
 
-  // Registro en backend después de confirmación en blockchain
+  useEffect(() => {
+    const validateCart = async () => {
+      try {
+        const response = await fetch(`${API_PATHS.company}/products/validate-cart`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(cart.map(item => ({ id: item.product.id, quantity: item.quantity })))
+        });
+        const result = await response.json();
+        setStockIssues(result.invalid || []);
+      } catch (error) {
+        console.error("Error validando stock", error);
+      } finally {
+        setCheckingStock(false);
+      }
+    };
+    validateCart();
+  }, [cart]);
+
   const registerTransaction = useCallback(async () => {
     if (!hash || !address || !pendingTx) return;
-    
     try {
       const response = await fetch("http://localhost:8000/payments/register-transaction", {
         method: "POST",
@@ -103,11 +104,9 @@ export function Payment({ onReset }: PaymentProps) {
           amount: pendingTx.amount,
           transaction_hash: hash,
           token: pendingTx.token
-        }),
+        })
       });
-
       const result = await response.json();
-      
       if (result.success) {
         showToast('success', "Éxito", result.message);
         setAmount("");
@@ -117,7 +116,7 @@ export function Payment({ onReset }: PaymentProps) {
           created_at: new Date().toISOString(),
           token: pendingTx.token,
           status: "pending"
-        });        
+        });
       } else {
         throw new Error(result.message);
       }
@@ -131,14 +130,12 @@ export function Payment({ onReset }: PaymentProps) {
   useEffect(() => {
     if (isConfirmed) {
       registerTransaction();
-      setPaymentCompleted(true);      
+      setPaymentCompleted(true);
     }
   }, [isConfirmed, registerTransaction]);
 
-  // Polling para actualizar el estado de la transacción
-  useEffect(() => {  
+  useEffect(() => {
     let interval: NodeJS.Timeout;
-    
     if (transactionData?.status === "pending") {
       interval = setInterval(() => {
         fetch(`http://localhost:8000/payments/transaction-details?txHash=${transactionData.transaction_hash}`)
@@ -149,21 +146,18 @@ export function Payment({ onReset }: PaymentProps) {
             }
           })
           .catch(console.error);
-      }, 10000); // Polling cada 10 segundos
+      }, 10000);
     }
-    
     return () => interval && clearInterval(interval);
   }, [transactionData]);
 
-
-  // Manejo de aprobación ERC20
   useEffect(() => {
     if (isApproveConfirmed && pendingTx && token !== "ETH") {
       const amountInUnits = convertToTokenUnits(pendingTx.amount, token);
-      const paymentFunctionName = token === "USDC" ? "payUSDC" 
-                           : token === "USDT" ? "payUSDT" 
-                           : "payLINK";
-      
+      const paymentFunctionName = token === "USDC" ? "payUSDC"
+        : token === "USDT" ? "payUSDT"
+        : "payLINK";
+
       writeContract({
         address: CONTRACT_ADDRESSES.PAYMENT,
         abi: ContractABI,
@@ -185,19 +179,15 @@ export function Payment({ onReset }: PaymentProps) {
       showToast('error', "Error", "Por favor, conecta tu wallet primero.");
       return;
     }
-  
     const decimalCount = amount.split('.')[1]?.length || 0;
     if (decimalCount > TOKEN_DECIMALS[token]) {
       showToast('error', "Error", `Máximo ${TOKEN_DECIMALS[token]} decimales permitidos`);
       return;
     }
-
     try {
       const txData: PendingTransaction = { amount, token };
       setPendingTx(txData);
-      
       const amountInUnits = convertToTokenUnits(amount, token);
-      
       if (token === "ETH") {
         await writeContract({
           address: CONTRACT_ADDRESSES.PAYMENT,
@@ -207,7 +197,6 @@ export function Payment({ onReset }: PaymentProps) {
           value: amountInUnits,
         });
       } else {
-        // Añadido await para esperar la aprobación
         await writeApprove({
           address: CONTRACT_ADDRESSES.TOKENS[token],
           abi: StandardERC20ABI,
@@ -225,89 +214,82 @@ export function Payment({ onReset }: PaymentProps) {
   const isLoadingState = isTransactionPending || isConfirming || isApproving || isWalletLoading;
 
   return (
-    <Box textAlign="center" p={5}>
+    <Box textAlign="center" p={5} mt={5} mb={5}>
       <VStack spaceY={4}>
-        <Heading size="2xl">Realizar un pago</Heading>
+        <Heading size="2xl">Realizar una compra</Heading>
 
         {address && (
-            <HStack>
+          <HStack>
             <Text>Wallet conectada:</Text>
             <WalletAddress address={address} />
           </HStack>
         )}
 
-        {!address ? ( // Esto debería estar protegido por el guard
+        {checkingStock ? (
+          <Spinner size="lg" />
+        ) : stockIssues.length > 0 ? (
+          <VStack spaceY={4}>
+            <Text color="red.500">
+              No hay suficiente stock para uno o más productos:
+            </Text>
+            {stockIssues.map((item) => (
+              <Text key={item.id} fontSize="sm">
+                Producto ID: {item.id} — Disponible: {item.available}
+              </Text>
+            ))}
+            <Button onClick={() => navigate("/cart-summary")} variant="outline" colorScheme="orange">
+              Editar carrito
+            </Button>
+          </VStack>
+        ) : !address ? (
           <Text color="gray.500">Conecta tu wallet para continuar.</Text>
         ) : isLoadingState || isApprovePending ? (
           <Spinner size="lg" />
-        ) : !isWalletRegistered ? ( // Esto debería estar protegido por el guard
+        ) : !isWalletRegistered ? (
           <VStack spaceY={4}>
-          <Text>
-            Antes de realizar tu primera transacción en nuestra plataforma de pagos onchain, es necesario registrar la wallet y firmar un mensaje para
-            verificar que eres el propietario. Esto garantiza la seguridad y evita fraudes, permitiéndonos
-            registrar tu dirección de manera segura.
-          </Text>
-          <Button colorPalette="blue" onClick={() => navigate("/register-wallet")}>
-            Ir al registro de wallet
-          </Button>          
+            <Text>
+              Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, es necesario registrar la wallet y firmar un mensaje para
+              verificar que eres el propietario. Esto garantiza la seguridad y evita fraudes, permitiéndonos registrar tu dirección de manera segura.
+            </Text>
+            <Button colorPalette="blue" onClick={() => navigate("/register-wallet")}>Ir al registro de wallet</Button>
           </VStack>
-        ) : paymentCompleted ? (  // Mostrar botón si el pago está completo
+        ) : paymentCompleted ? (
           <VStack spaceY={4}>
-            <Text color="green.500">¡Pago realizado con éxito!</Text>
-            <Button 
-              colorPalette="blue" 
-              onClick={onReset}
-              variant="outline"
-            >
-              Realizar nuevo pago
-            </Button>
+            <Text color="green.500">¡Compra realizada con éxito!</Text>
+            <Button colorPalette="blue" onClick={onReset} variant="outline">Realizar nueva compra</Button>
           </VStack>
-          ) : (
-          <>
-            <PaymentForm
-              onSubmit={handlePayment}
-              isProcessing={isLoadingState}
-              selectedToken={token}
-              setSelectedToken={setToken}
-              amount={amount}
-              setAmount={setAmount}
-            />
-          </>
+        ) : (
+          <PaymentForm
+            onSubmit={handlePayment}
+            isProcessing={isLoadingState}
+            selectedToken={token}
+            setSelectedToken={setToken}
+            amount={amount}
+            setAmount={setAmount}
+          />
         )}
 
         {token !== 'ETH' && isApprovePending && (
-          <Text color="blue.500" mt={4}>
-            Por favor, aprueba el límite de gasto en tu wallet (MetaMask)
-          </Text>
+          <Text color="blue.500" mt={4}>Por favor, aprueba el límite de gasto en tu wallet (MetaMask)</Text>
         )}
 
         {token !== 'ETH' && isApproving && (
-          <Text color="blue.500" mt={4}>
-            Esperando confirmación de la aprobación en la blockchain...
-          </Text>
+          <Text color="blue.500" mt={4}>Esperando confirmación de la aprobación en la blockchain...</Text>
         )}
 
         {token !== 'ETH' && approveError && (
-          <Text color="red.500" mt={4}>
-            Error en la aprobación del límite de gasto...
-          </Text>
+          <Text color="red.500" mt={4}>Error en la aprobación del límite de gasto...</Text>
         )}
 
         {isTransactionPending && (
-          <Text color="blue.500" mt={4}>
-            Por favor, confirma la transacción en tu wallet (MetaMask)
-          </Text>
+          <Text color="blue.500" mt={4}>Por favor, confirma la transacción en tu wallet (MetaMask)</Text>
         )}
 
         {isConfirming && (
-          <Text color="blue.500" mt={4}>
-            Esperando confirmación de la transacción en la blockchain...
-          </Text>
+          <Text color="blue.500" mt={4}>Esperando confirmación de la transacción en la blockchain...</Text>
         )}
 
-        {transactionData && (
-          <TransactionData tx={transactionData} />
-        )}          
+        {transactionData && <TransactionData tx={transactionData} />}
 
       </VStack>
     </Box>

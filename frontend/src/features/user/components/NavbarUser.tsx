@@ -74,10 +74,11 @@ export function Navbar() {
   // Renderizar el menú de navegación
   const renderNavItems = () => (
     <>
+      <NavButton to="/products">Productos</NavButton>
       {isConnected && (
-        <>
-          <NavButton to="/payments-history">Historial de Pagos</NavButton>
-          <NavButton to="/payment">Realizar Pago</NavButton>
+        <>          
+          <NavButton to="/payments-history">Historial de Compras</NavButton>
+          <NavButton to="/payment">Realizar Compra</NavButton>
         </>
       )}
       <Button 
@@ -134,10 +135,11 @@ export function Navbar() {
                       spaceY={4}
                       align="stretch"
                     >
+                      <NavButton to="/products">Productos</NavButton>
                       {isConnected && (
                         <>
-                          <NavButton to="/payments-history">Historial de Pagos</NavButton>
-                          <NavButton to="/payment">Realizar Pago</NavButton>                          
+                          <NavButton to="/payments-history">Historial de Compras</NavButton>
+                          <NavButton to="/payment">Realizar Compra</NavButton>                          
                         </>
                       )}
 
