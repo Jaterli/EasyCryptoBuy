@@ -13,17 +13,17 @@ const WalletAddress = ({ address }: { address: string }) => {
 
   return (
     <HStack>
-      <Text fontFamily="mono" fontSize={{ base: "xs", md: "lg" }}>
+      <Text fontFamily="mono" fontSize={{ base: "xs", md: "lg" }} onClick={() => setIsTruncated(!isTruncated)}>
         {isTruncated ? truncateAddress(address) : address}
       </Text>
-      <IconButton
+      {/* <IconButton
           aria-label={isTruncated ? "Mostrar completa" : "Ocultar"}
           size="xs"
           variant="ghost"
           onClick={() => setIsTruncated(!isTruncated)}
         >
           {isTruncated ? <FaEye /> : <FaEyeSlash />}
-        </IconButton>
+        </IconButton> */}
     </HStack>
   );
 };

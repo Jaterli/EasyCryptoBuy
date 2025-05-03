@@ -15,10 +15,10 @@ import {
   Select,
   createListCollection,
 } from "@chakra-ui/react";
-import { Product } from "../../../shared/types/Product";
 import * as api from "../api/products";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
+import { Product } from "@/shared/types/types";
 
 const itemsPerPageOptions = createListCollection({
   items: [

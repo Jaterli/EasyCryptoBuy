@@ -1,16 +1,16 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useState, useEffect, useCallback } from "react";
-import { Box, VStack, Text, Spinner, Heading, HStack, Button } from "@chakra-ui/react";
+import { Box, VStack, Text, Spinner, Heading, HStack, Button, Grid, GridItem, Image, Badge, Spacer, Stack } from "@chakra-ui/react";
 import { toaster } from "@/shared/components/ui/toaster";
 import ContractABI from "@/abis/PAYMENT_CONTRACT_ABI.json";
 import StandardERC20ABI from "@/abis/ERC20.json";
 import { PaymentForm } from "./PaymentForm";
 import { useWallet } from "@/shared/context/useWallet";
-import WalletAddress from "@/shared/components/TruncatedAddress";
 import { useNavigate } from "react-router-dom";
 import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { API_PATHS } from "@/config/paths";
+import { TransactionProp } from "@/shared/types/types";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -28,27 +28,17 @@ const TOKEN_DECIMALS = {
   LINK: 18
 };
 
-interface PendingTransaction {
+export interface PendingTransaction {
   amount: string;
   token: keyof typeof TOKEN_DECIMALS;
 }
 
-interface TransactionProp {
-  transaction_hash: string;
-  amount: string;
-  created_at: string;
-  token: string;
-  status: string;
-}
 
-interface PaymentProps {
-  onReset: () => void;
-}
 
-export function Payment({ onReset }: PaymentProps) {
+export function Payment() {
   const { address } = useAccount();
   const { isWalletRegistered, isLoading: isWalletLoading } = useWallet();
-  const { cart } = useCart();
+  const { cart, cartLoading, clearCart } = useCart();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
@@ -62,7 +52,7 @@ export function Payment({ onReset }: PaymentProps) {
   const { data: approveHash, writeContract: writeApprove, isPending: isApprovePending, error: approveError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const { isLoading: isApproving, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
-
+  
   const showToast = useCallback((type: 'info' | 'error' | 'success', title: string, message: string) => {
     toaster.create({ title, description: message, type, duration: type === 'error' ? 5000 : 3000 });
   }, []);
@@ -77,7 +67,7 @@ export function Payment({ onReset }: PaymentProps) {
   useEffect(() => {
     const validateCart = async () => {
       try {
-        const response = await fetch(`${API_PATHS.company}/products/validate-cart`, {
+        const response = await fetch(`${API_PATHS.company}/validate-cart`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(cart.map(item => ({ id: item.product.id, quantity: item.quantity })))
@@ -96,7 +86,7 @@ export function Payment({ onReset }: PaymentProps) {
   const registerTransaction = useCallback(async () => {
     if (!hash || !address || !pendingTx) return;
     try {
-      const response = await fetch("http://localhost:8000/payments/register-transaction", {
+      const response = await fetch(`${API_PATHS.payments}/register-transaction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +112,7 @@ export function Payment({ onReset }: PaymentProps) {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showToast('error', "Error en el servidor", errorMessage);
+      showToast('error', "Error en el servidor", errorMessage); //table payments_transaction has no column named cart_id
       setPendingTx(null);
     }
   }, [hash, address, pendingTx, showToast]);
@@ -131,6 +121,7 @@ export function Payment({ onReset }: PaymentProps) {
     if (isConfirmed) {
       registerTransaction();
       setPaymentCompleted(true);
+      clearCart(); 
     }
   }, [isConfirmed, registerTransaction]);
 
@@ -138,7 +129,7 @@ export function Payment({ onReset }: PaymentProps) {
     let interval: NodeJS.Timeout;
     if (transactionData?.status === "pending") {
       interval = setInterval(() => {
-        fetch(`http://localhost:8000/payments/transaction-details?txHash=${transactionData.transaction_hash}`)
+        fetch(`${API_PATHS.payments}/transaction-details?txHash=${transactionData.transaction_hash}`)
           .then(response => response.json())
           .then(data => {
             if (data.success && data.transaction) {
@@ -212,86 +203,184 @@ export function Payment({ onReset }: PaymentProps) {
   };
 
   const isLoadingState = isTransactionPending || isConfirming || isApproving || isWalletLoading;
+  const totalUSD = cart.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
 
   return (
-    <Box textAlign="center" p={5} mt={5} mb={5}>
-      <VStack spaceY={4}>
-        <Heading size="2xl">Realizar una compra</Heading>
+    <Box p={5} mt={5} mb={5}>
+      <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8}>
+        {/* Columna izquierda - Resumen del carrito */}
+        <GridItem>
+          <Box>
+            <Heading size="lg" mb={6} textAlign="left">Resumen de tu compra</Heading>
+            
+            {cartLoading ? (
+              <Spinner size="md" />
+            ) : cart.length === 0 ? (
+              <Text opacity={0.5}>Tu carrito está vacío.</Text>
+            ) : (
+              <Stack align="stretch">
+                {cart.map((item) => (
+                  <Box className="cart-item" key={item.product.id}>
+                    <HStack align="flex-start" spaceX={4}>
+                      <Box flexShrink={0}>
+                        <Image 
+                          src={`https://picsum.photos/80?${item.product.name}`}
+                          boxSize="80px"
+                          objectFit="cover"
+                          borderRadius="md"
+                          alt={item.product.name}
+                        />
+                      </Box>
+                      <Box flex={1}>
+                        <HStack justify="space-between">
+                          <Text fontWeight="bold" fontSize="lg">{item.product.name}</Text>
+                          <Text fontWeight="bold" color="blue.500">
+                            ${(item.product.amount_usd * item.quantity).toFixed(2)}
+                          </Text>
+                        </HStack>
+                        <Text fontSize="sm" opacity="0.7" mb={1}>
+                          {item.product.description || "Sin descripción disponible"}
+                        </Text>
+                        <HStack justify="space-between">
+                          <Badge colorPalette="blue" variant="outline">
+                            x {item.quantity} unidad{item.quantity > 1 ? "es" : ""}
+                          </Badge>
+                          <Text fontSize="sm" opacity="0.5" >
+                            ${item.product.amount_usd} c/u
+                          </Text>
+                        </HStack>
+                      </Box>
+                    </HStack>
+                  </Box>
+                ))}
+                
+                <Spacer my={4} />
+                
+                <HStack justify="space-between" mt={2}>
+                  <Text fontSize="lg" fontWeight="bold">Total:</Text>
+                  <Text fontSize="xl" fontWeight="bold" color="green.600">
+                    ${totalUSD.toFixed(2)} USD
+                  </Text>
+                </HStack>
+              </Stack>
+            )}
+          </Box>
 
-        {address && (
-          <HStack>
-            <Text>Wallet conectada:</Text>
-            <WalletAddress address={address} />
-          </HStack>
-        )}
-
-        {checkingStock ? (
-          <Spinner size="lg" />
-        ) : stockIssues.length > 0 ? (
-          <VStack spaceY={4}>
-            <Text color="red.500">
-              No hay suficiente stock para uno o más productos:
-            </Text>
-            {stockIssues.map((item) => (
-              <Text key={item.id} fontSize="sm">
-                Producto ID: {item.id} — Disponible: {item.available}
+          {/* Mensajes de stock */}
+          {checkingStock ? (
+            <Box mt={4} textAlign="center">
+              <Spinner size="lg" />
+              <Text mt={2}>Verificando disponibilidad...</Text>
+            </Box>
+          ) : stockIssues.length > 0 && (
+            <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200" bg="red.50">
+              <Text color="red.600" fontWeight="bold" mb={2}>
+                No hay suficiente stock para los siguientes productos:
               </Text>
-            ))}
-            <Button onClick={() => navigate("/cart-summary")} variant="outline" colorScheme="orange">
-              Editar carrito
-            </Button>
-          </VStack>
-        ) : !address ? (
-          <Text color="gray.500">Conecta tu wallet para continuar.</Text>
-        ) : isLoadingState || isApprovePending ? (
-          <Spinner size="lg" />
-        ) : !isWalletRegistered ? (
-          <VStack spaceY={4}>
-            <Text>
-              Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, es necesario registrar la wallet y firmar un mensaje para
-              verificar que eres el propietario. Esto garantiza la seguridad y evita fraudes, permitiéndonos registrar tu dirección de manera segura.
-            </Text>
-            <Button colorPalette="blue" onClick={() => navigate("/register-wallet")}>Ir al registro de wallet</Button>
-          </VStack>
-        ) : paymentCompleted ? (
-          <VStack spaceY={4}>
-            <Text color="green.500">¡Compra realizada con éxito!</Text>
-            <Button colorPalette="blue" onClick={onReset} variant="outline">Realizar nueva compra</Button>
-          </VStack>
-        ) : (
-          <PaymentForm
-            onSubmit={handlePayment}
-            isProcessing={isLoadingState}
-            selectedToken={token}
-            setSelectedToken={setToken}
-            amount={amount}
-            setAmount={setAmount}
-          />
-        )}
+              <VStack align="stretch" spaceY={2}>
+                {stockIssues.map((item) => (
+                  <Text key={item.id} fontSize="sm">
+                    Producto ID: {item.id} — Disponible: {item.available}
+                  </Text>
+                ))}
+              </VStack>
+              <Button 
+                onClick={() => navigate("/cart-summary")} 
+                variant="outline" 
+                colorPalette="red" 
+                mt={4}
+                size="sm"
+              >
+                Editar carrito
+              </Button>
+            </Box>
+          )}
+        </GridItem>
 
-        {token !== 'ETH' && isApprovePending && (
-          <Text color="blue.500" mt={4}>Por favor, aprueba el límite de gasto en tu wallet (MetaMask)</Text>
-        )}
+        {/* Columna derecha - Formulario de pago */}
+        <GridItem>
+          <Box 
+            p={6}
+            position="sticky"
+            top="20px"
+          >
+            {!address ? (
+              <Text opacity={0.5} textAlign="center">Conecta tu wallet para continuar.</Text>
+            ) : isLoadingState || isApprovePending ? (
+              <VStack spaceY={4}>
+                <Spinner size="lg" />
+                <Text>
+                  {isApprovePending 
+                    ? "Esperando aprobación del token..." 
+                    : "Procesando tu transacción..."}
+                </Text>
+              </VStack>
+            ) : !isWalletRegistered ? (
+              <VStack spaceY={4}>
+                <Text textAlign="center">
+                  Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, es necesario registrar la wallet y firmar un mensaje para verificar que eres el propietario.
+                </Text>
+                <Button 
+                  colorPalette="blue" 
+                  onClick={() => navigate("/register-wallet")}
+                  width="full"
+                >
+                  Ir al registro de wallet
+                </Button>
+              </VStack>
+            ) : paymentCompleted ? (
+              <VStack spaceY={4}>
+                <Box textAlign="center">
+                  <Text color="green.500" fontSize="xl" fontWeight="bold" paddingBottom={4}>
+                    ¡Compra realizada con éxito!
+                  </Text>
+                  {transactionData && <TransactionData tx={transactionData} />}
+                </Box>
+              </VStack>
+            ) : (
+              <PaymentForm
+                onSubmit={handlePayment}
+                isProcessing={isLoadingState}
+                selectedToken={token}
+                setSelectedToken={setToken}
+                amount={amount}
+                setAmount={setAmount}
+              />
+            )}
 
-        {token !== 'ETH' && isApproving && (
-          <Text color="blue.500" mt={4}>Esperando confirmación de la aprobación en la blockchain...</Text>
-        )}
+            {/* Mensajes de estado */}
+            {token !== 'ETH' && isApprovePending && (
+              <Text color="blue.500" mt={4} textAlign="center">
+                Por favor, aprueba el límite de gasto en tu wallet
+              </Text>
+            )}
 
-        {token !== 'ETH' && approveError && (
-          <Text color="red.500" mt={4}>Error en la aprobación del límite de gasto...</Text>
-        )}
+            {token !== 'ETH' && isApproving && (
+              <Text color="blue.500" mt={4} textAlign="center">
+                Esperando confirmación de la aprobación...
+              </Text>
+            )}
 
-        {isTransactionPending && (
-          <Text color="blue.500" mt={4}>Por favor, confirma la transacción en tu wallet (MetaMask)</Text>
-        )}
+            {token !== 'ETH' && approveError && (
+              <Text color="red.500" mt={4} textAlign="center">
+                Error en la aprobación del límite de gasto
+              </Text>
+            )}
 
-        {isConfirming && (
-          <Text color="blue.500" mt={4}>Esperando confirmación de la transacción en la blockchain...</Text>
-        )}
+            {isTransactionPending && (
+              <Text color="blue.500" mt={4} textAlign="center">
+                Por favor, confirma la transacción en tu wallet
+              </Text>
+            )}
 
-        {transactionData && <TransactionData tx={transactionData} />}
-
-      </VStack>
+            {isConfirming && (
+              <Text color="blue.500" mt={4} textAlign="center">
+                Esperando confirmación en la blockchain...
+              </Text>
+            )}
+          </Box>
+        </GridItem>
+      </Grid>
     </Box>
   );
 }

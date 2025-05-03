@@ -12,7 +12,6 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.shortcuts import get_list_or_404
-import os
 import logging
 from django.conf import settings
 from django.views.decorators.http import require_GET
@@ -51,129 +50,75 @@ def verify_signature(request):
 logger = logging.getLogger(__name__)
 @csrf_exempt
 def register_transaction(request):
-    logger.debug("Iniciando register_transaction. Método: %s", request.method)
-    
     if request.method != 'POST':
-        logger.warning("Intento de acceso con método no permitido: %s", request.method)
         return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
-    
+
     try:
-        logger.debug("Parseando cuerpo de la solicitud...")
         data = json.loads(request.body)
-        logger.debug("Datos recibidos: %s", data)
-        
-        # Extraer campos
         wallet_address = data.get("wallet_address")
         amount = data.get("amount")
         transaction_hash = data.get("transaction_hash")
         token = data.get("token")
-        
-        logger.debug(
-            "Campos recibidos - wallet: %s, amount: %s, tx_hash: %s, token: %s",
-            wallet_address, amount, transaction_hash, token
-        )
 
         if not all([wallet_address, amount, transaction_hash, token]):
-            logger.error("Faltan campos obligatorios. Campos recibidos: %s", data.keys())
             return JsonResponse({"success": False, "message": "Faltan campos necesarios"}, status=400)
-        
-        # Convertir amount a Decimal
+
         try:
             amount = Decimal(amount)
         except (TypeError, InvalidOperation):
-            logger.error("Formato inválido para el campo amount: %s", amount)
             return JsonResponse({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
-        # Conexión Ethereum
         provider_url = getattr(settings, 'WEB3_PROVIDER', None)
         if not provider_url:
-            logger.critical("WEB3_PROVIDER no configurado en settings.py")
             return JsonResponse({"success": False, "message": "WEB3_PROVIDER_URL no configurado"}, status=500)
-        
-        logger.debug("Conectando a Ethereum usando provider: %s", provider_url)
-        web3 = Web3(Web3.HTTPProvider(provider_url))  
-        
+
+        web3 = Web3(Web3.HTTPProvider(provider_url))
         if not web3.is_connected():
-            logger.error("Error de conexión con el provider Ethereum: %s", provider_url)
             return JsonResponse({"success": False, "message": "No se pudo conectar a la red Ethereum"}, status=500)
-        
-        logger.info("Conexión exitosa a Ethereum. Chain ID: %s", web3.eth.chain_id)
-        
-        # Obtener recibo de la transacción
-        logger.debug("Buscando recibo de transacción: %s", transaction_hash)
+
         try:
             tx_receipt = web3.eth.get_transaction_receipt(transaction_hash)
-        except Exception as e:
-            logger.exception("No se pudo obtener el recibo de la transacción")
+        except Exception:
             return JsonResponse({"success": False, "message": "Transacción no encontrada"}, status=404)
-        
+
         if tx_receipt is None or tx_receipt.status != 1:
-            logger.error("Transacción fallida o aún no confirmada. TX Hash: %s", transaction_hash)
             return JsonResponse({"success": False, "message": "Transacción fallida o no confirmada"}, status=400)
 
-        # Obtener la transacción completa para verificar el remitente
         try:
             tx = web3.eth.get_transaction(transaction_hash)
             if tx['from'].lower() != wallet_address.lower():
-                logger.warning(
-                    "La dirección proporcionada (%s) no coincide con el remitente real (%s)",
-                    wallet_address, tx['from']
-                )
                 return JsonResponse({"success": False, "message": "La dirección no coincide con el remitente"}, status=400)
-        except Exception as e:
-            logger.exception("Error al obtener los datos completos de la transacción")
+        except Exception:
             return JsonResponse({"success": False, "message": "No se pudo verificar el remitente de la transacción"}, status=500)
 
-        # Verificar si la transacción ya fue registrada
         if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
-            logger.warning("Transacción ya registrada previamente: %s", transaction_hash)
             return JsonResponse({"success": False, "message": "La transacción ya ha sido registrada"}, status=409)
 
-        # Cargar ABI del contrato
-        base_dir = Path(__file__).resolve().parent
-        abi_path = base_dir / 'abis' / 'PAYMENT_CONTRACT_ABI.json'
-        logger.debug("Buscando ABI en: %s", abi_path)
-        
-        try:
-            with open(str(abi_path), "r") as f:
-                contract_abi = json.load(f)
-        except FileNotFoundError:
-            logger.exception("Archivo ABI no encontrado en la ruta especificada")
-            return JsonResponse({"success": False, "message": "No se encontró el ABI del contrato"}, status=500)
-        
-        contract_address = os.environ.get("PAYMENT_CONTRACT_ADDRESS")
-        if not contract_address:
-            logger.critical("PAYMENT_CONTRACT_ADDRESS no configurado")
-            return JsonResponse({"success": False, "message": "PAYMENT_CONTRACT_ADDRESS no configurado"}, status=500)
-        
-        logger.debug("Instanciando contrato en: %s", contract_address)
-        try:
-            contract = web3.eth.contract(
-                address=web3.to_checksum_address(contract_address),
-                abi=contract_abi
-            )
-        except Exception as e:
-            logger.exception("Error instanciando el contrato")
-            return JsonResponse({"success": False, "message": "No se pudo instanciar el contrato"}, status=500)
-       
-        # Registrar en BD
-        logger.info("Creando registro de transacción en BD...")
-        Transaction.objects.create(
+        profile = UserProfile.objects.get(wallet_address=wallet_address)
+        cart = Cart.objects.filter(user=profile).first()
+
+        tx = Transaction.objects.create(
             wallet_address=wallet_address,
             amount=amount,
             transaction_hash=transaction_hash,
             token=token,
-            status='pending'
+            status='pending',
+            cart=cart
         )
-        logger.info("Transacción registrada exitosamente. Hash: %s", transaction_hash)
-        
+
+        # Resta de stock. La resta tendría que hacerse sobre el modelo products en la app company y solo cuando la transacción se haya marcado como confirmed.
+        # if cart:
+        #     for item in cart.items.all():
+        #         item.product.quantity = max(item.product.quantity - item.quantity, 0)
+        #         item.product.save()
+
         return JsonResponse({"success": True, "message": "Transacción registrada exitosamente"})
-    
+
     except json.JSONDecodeError:
-        logger.exception("Error decodificando JSON. Body recibido: %s", request.body)
         return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
     except Exception as e:
-        logger.exception("Error inesperado en register_transaction")
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
     

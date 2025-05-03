@@ -8,6 +8,6 @@ router.register(r'sales', SaleViewSet, basename='sale')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('validate_cart', validate_cart, name='validate-cart'),
+    path('validate-cart', validate_cart, name='validate_cart'),
 ]
 
