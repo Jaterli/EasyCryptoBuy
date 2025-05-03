@@ -5,11 +5,12 @@ from company.models import Product
 class CartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.PrimaryKeyRelatedField(source='product', queryset=Product.objects.all())
     product_name = serializers.CharField(source='product.name', read_only=True)
+    product_description = serializers.CharField(source='product.description', read_only=True)
     product_price = serializers.DecimalField(source='product.amount_usd', max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
         model = CartItem
-        fields = ('id', 'product_id', 'product_name', 'product_price', 'quantity')
+        fields = ('id', 'product_id', 'product_name', 'product_description', 'product_price', 'quantity')
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)

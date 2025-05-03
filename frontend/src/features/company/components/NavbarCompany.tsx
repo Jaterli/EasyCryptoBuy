@@ -21,15 +21,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 import { ColorModeButton } from "@/shared/components/ui/color-mode";
 import { useAdminAuth } from "@/shared/context/AdminAuthContext";
-
-// Icono de hamburguesa SVG
-const HamburgerIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-    </svg>
-);
+import { FaBars } from "react-icons/fa";
 
 export function NavbarCompany() {
     const { logout, username } = useAdminAuth();
@@ -118,7 +110,7 @@ export function NavbarCompany() {
             <Flex align="center">
                 <Box fontSize="xl" fontWeight="bold">
                     <NavLink to={username ? "/company/products" : "/"}>
-                        Blockchain Admin
+                        EasyCryptoBuy Admin
                     </NavLink>
                 </Box>
                 
@@ -142,20 +134,20 @@ export function NavbarCompany() {
                         )}
                         <Drawer.Root placement="top" open={open} onInteractOutside={onClose}>
                             <Drawer.Trigger asChild>
-                                <IconButton
-                                    aria-label="Abrir menú"
-                                    variant="outline"
-                                    onClick={onOpen}
-                                >
-                                    <HamburgerIcon />
-                                </IconButton>
+                            <IconButton
+                                aria-label="Menú principal"
+                                variant="ghost"
+                                size="md"
+                                onClick={onOpen}
+                            ><FaBars />
+                            </IconButton>
                             </Drawer.Trigger>
                             <Portal>
                                 <Drawer.Backdrop />
                                 <Drawer.Positioner>
                                     <DrawerContent bg={{ _dark: "blue.900", base: "blue.100" }}>
                                         <Drawer.Header>
-                                        <Drawer.Title>Blockchain Admin</Drawer.Title>
+                                        <Drawer.Title fontSize={"xs"}>EasyCryptoBuy Admin</Drawer.Title>
                                         </Drawer.Header>
 
                                         <DrawerBody>

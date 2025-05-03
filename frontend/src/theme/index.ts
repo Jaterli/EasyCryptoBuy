@@ -73,6 +73,13 @@ const customTheme = defineConfig({
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
       }
     },
+    ".cart-item" :{
+      borderBottom: "1px solid var(--border-color)",
+      padding: "8px",
+      _last: {
+         borderBottom: "none" 
+      }
+    },
     ".form": {
       maxWidth: "100%",
       padding: "1.5rem",

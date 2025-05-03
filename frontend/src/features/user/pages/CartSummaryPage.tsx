@@ -3,6 +3,7 @@ import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { FaTrash } from "react-icons/fa";
 import { RiDeleteBin3Line } from "react-icons/ri";
+import { GrTransaction } from "react-icons/gr";
 
 export const CartSummaryPage = () => {
   const { cart, removeFromCart, clearCart } = useCart();
@@ -60,9 +61,10 @@ export const CartSummaryPage = () => {
 
           <HStack mt={6} spaceX={4}>
             <Button colorPalette="blue" onClick={() => navigate("/payment")}>
+              <GrTransaction />
               Proceder al pago
             </Button>
-            <Button variant="outline" onClick={clearCart}>
+            <Button variant="solid" onClick={clearCart}>
             <RiDeleteBin3Line />Vaciar carrito
             </Button>
           </HStack>

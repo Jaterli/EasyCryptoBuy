@@ -2,17 +2,14 @@ import { useEffect, useState } from "react";
 import { Box, Heading, Grid, Button } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { Product } from "@/shared/types/Product";
 import { ProductCard } from "../components/ProductCard";
 import { fetchProducts } from "@/features/company/api/products";
-import { useCartSync } from "../hooks/useCartSync";
+import { Product } from "@/shared/types/types";
 
 export const ProductCatalogPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { cart, addToCart } = useCart();
   const navigate = useNavigate();
-
-  useCartSync(); // Hook que sincroniza el carrito automáticamente
 
   useEffect(() => {
     fetchProducts().then(setProducts);

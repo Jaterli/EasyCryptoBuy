@@ -1,7 +1,8 @@
+import { CartItem } from "@/shared/types/CartItem";
+import { Product } from "@/shared/types/Product";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { API_PATHS } from "@/config/paths";
-import { ApiCartItem, CartItem, Product } from "@/shared/types/types";
 
 interface CartContextType {
   cart: CartItem[];
@@ -57,15 +58,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json();
 
         if (Array.isArray(data?.items)) {
-            const restored = data.items.map((item: ApiCartItem) => ({
-                product: {
-                  id: item.product_id,
-                  name: item.product_name,
-                  description: item.product_description,
-                  amount_usd: item.product_price
-                },
-                quantity: item.quantity
-              }));
+          const restored = data.items.map((item: any) => ({
+            product: {
+              id: item.product_id,
+              name: item.product_name,
+              amount_usd: item.product_price
+            },
+            quantity: item.quantity
+          }));
           setCart(restored);
         } else {
           setCart([]);

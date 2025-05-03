@@ -1,16 +1,17 @@
 import { 
-  Button, 
   Input, 
   VStack, 
   Box, 
   Text,
-  Field
+  Field,
+  NativeSelect,
+  IconButton
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useTokenPrices } from "@/shared/hooks/useTokenPrices";
 import { useCart } from "@/features/user/context/CartContext";
+import { GrTransaction } from "react-icons/gr";
 
-// Tipos
 type Token = "USDT" | "USDC" | "ETH" | "LINK";
 
 interface PaymentFormProps {
@@ -65,8 +66,6 @@ export function PaymentForm({
   return (
     <Box 
       p={6} 
-      borderRadius="lg" 
-      borderWidth="1px" 
       boxShadow="md"
       width="100%"
       maxW="500px"
@@ -78,15 +77,17 @@ export function PaymentForm({
           <Field.Label fontWeight="medium" mb={2} color="gray.600" _dark={{ color: "gray.300" }}>
             Selecciona un token
           </Field.Label>
-          <select
+          <NativeSelect.Root>
+            <NativeSelect.Field
             value={selectedToken}
             onChange={(e) => setSelectedToken(e.currentTarget.value as Token)}
-            disabled={isProcessing}
           >
             {TOKEN_OPTIONS.map((item) => (
               <option key={item.value} value={item.value}>{item.label}</option>
             ))}
-          </select>
+          </NativeSelect.Field>
+          <NativeSelect.Indicator />
+          </NativeSelect.Root>
         </Field.Root>
 
         <Field.Root>
@@ -99,7 +100,6 @@ export function PaymentForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             readOnly={true}
-            disabled={isProcessing}
             size="md"
           />
         </Field.Root>
@@ -110,18 +110,17 @@ export function PaymentForm({
           </Text>
         )}
 
-        <Button
+        <IconButton
           colorPalette="blue"
           onClick={handlePayment}        
           disabled={isProcessing || !amount}
           loading={isProcessing}
           loadingText="Procesando..."
-          size="lg"
           mt={4}
-          width="100%"
         >
+          <GrTransaction />
           Pagar
-        </Button>
+        </IconButton>
       </VStack>
     </Box>
   );
