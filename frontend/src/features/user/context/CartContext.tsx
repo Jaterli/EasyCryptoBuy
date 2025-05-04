@@ -104,8 +104,20 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart(prev => prev.filter(item => item.product.id !== id));
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = async () => {
+    if (!address) return;
+    
+    try {
+      await fetch(`${API_PATHS.payments}/clear-cart/${address}/`, {
+        method: "DELETE"
+      });
+      setCart([]);
+    } catch (err) {
+      console.error("Error limpiando carrito en backend:", err);
+    }
+  };
 
+  
   return (
     <CartContext.Provider
       value={{

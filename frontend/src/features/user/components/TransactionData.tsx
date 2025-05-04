@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"; // <-- Añadir imports
-import { Text, Heading, Stack, HStack, VStack, Icon, Badge, Card, CardBody, CardHeader, IconButton, useBreakpointValue } from "@chakra-ui/react";
+import { Text, Heading, Stack, HStack, VStack, Icon, Badge, Card, CardBody, CardHeader, IconButton, useBreakpointValue, Box } from "@chakra-ui/react";
 import { FaHistory, FaCopy } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -100,12 +100,12 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                                     </Text>
                                 </Stack>
                                 <HStack>
-                                    <Text fontSize="sm" truncate flex={1}>
+                                    <Box fontSize="sm" truncate flex={1}>
                                         {isMobile ? (
                                             <WalletAddress address={tx.transaction_hash} />
                                             ) : (tx.transaction_hash)
                                         }    
-                                    </Text>
+                                    </Box>
                                     <IconButton
                                         aria-label="Copiar hash"                                 
                                         size="xs"
