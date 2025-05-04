@@ -33,8 +33,6 @@ export interface PendingTransaction {
   token: keyof typeof TOKEN_DECIMALS;
 }
 
-
-
 export function Payment() {
   const { address } = useAccount();
   const { isWalletRegistered, isLoading: isWalletLoading } = useWallet();
@@ -107,12 +105,13 @@ export function Payment() {
           token: pendingTx.token,
           status: "pending"
         });
+        clearCart(); 
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showToast('error', "Error en el servidor", errorMessage); //table payments_transaction has no column named cart_id
+      showToast('error', "Error en el servidor", errorMessage);
       setPendingTx(null);
     }
   }, [hash, address, pendingTx, showToast]);
@@ -121,7 +120,6 @@ export function Payment() {
     if (isConfirmed) {
       registerTransaction();
       setPaymentCompleted(true);
-      clearCart(); 
     }
   }, [isConfirmed, registerTransaction]);
 
@@ -205,9 +203,33 @@ export function Payment() {
   const isLoadingState = isTransactionPending || isConfirming || isApproving || isWalletLoading;
   const totalUSD = cart.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
 
+  if (paymentCompleted) {
+    return (
+      <Box p={5} mt={5} mb={5}>
+        <VStack gap={8} align="center">
+          <Text color="green.500" fontSize="2xl" fontWeight="bold">
+            ¡Compra realizada con éxito!
+          </Text>
+          {transactionData && (
+            <Box width="100%" maxWidth="800px">
+              <TransactionData tx={transactionData} />
+            </Box>
+          )}
+          <Button 
+            colorPalette="blue" 
+            onClick={() => navigate("/products")}
+            mt={4}
+          >
+            Volver a la tienda
+          </Button>
+        </VStack>
+      </Box>
+    );
+  }
+
   return (
     <Box p={5} mt={5} mb={5}>
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={8}>
+      <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={{ base: "0", lg: "8" }}>
         {/* Columna izquierda - Resumen del carrito */}
         <GridItem>
           <Box>
@@ -327,15 +349,6 @@ export function Payment() {
                 >
                   Ir al registro de wallet
                 </Button>
-              </VStack>
-            ) : paymentCompleted ? (
-              <VStack spaceY={4}>
-                <Box textAlign="center">
-                  <Text color="green.500" fontSize="xl" fontWeight="bold" paddingBottom={4}>
-                    ¡Compra realizada con éxito!
-                  </Text>
-                  {transactionData && <TransactionData tx={transactionData} />}
-                </Box>
               </VStack>
             ) : (
               <PaymentForm
