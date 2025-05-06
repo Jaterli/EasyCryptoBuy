@@ -11,7 +11,7 @@ export function ContractBalance() {
     const fetchBalance = async () => {
       try {
         const result = await getBalance(config, {
-          address: '0xd9145CCE52D386f254917e481eB44e9943F39138',
+          address: '0x973F62d7416f0a538975cC72c1665079A4FFE1BB',
         });
         setBalance(result.formatted); // Usamos `formatted` para obtener el balance en formato legible
       } catch (err) {

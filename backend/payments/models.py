@@ -18,7 +18,7 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.wallet_address} - {self.amount} - {self.status}"
+        return f"{self.wallet_address} - {self.transaction_hash} - {self.amount} - {self.status}"
 
     def generate_purchase_summary(self):
         if not self.cart:

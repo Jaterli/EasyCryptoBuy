@@ -6,8 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract PaymentContract {
     using SafeERC20 for IERC20;
-    
-    event PaymentReceived(address indexed sender, uint256 amount, address token, string currency);
+
+    event PaymentReceived(
+        address indexed sender,
+        uint256 amount,
+        address token,
+        string currency,
+        uint256 indexed transactionId
+    );
     event Withdrawn(address indexed receiver, uint256 amount, address token);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -22,30 +28,30 @@ contract PaymentContract {
     }
 
     // Función para pagar con ETH
-    function payETH() external payable {
+    function payETH(uint256 transactionId) external payable {
         require(msg.value > 0, "Amount must be > 0");
-        emit PaymentReceived(msg.sender, msg.value, address(0), "ETH");
+        emit PaymentReceived(msg.sender, msg.value, address(0), "ETH", transactionId);
     }
 
     // Funciones específicas para cada token
-    function payUSDT(uint256 amount) external {
-        _processPayment(USDT, amount, "USDT");
+    function payUSDT(uint256 amount, uint256 transactionId) external {
+        _processPayment(USDT, amount, "USDT", transactionId);
     }
 
-    function payUSDC(uint256 amount) external {
-        _processPayment(USDC, amount, "USDC");
+    function payUSDC(uint256 amount, uint256 transactionId) external {
+        _processPayment(USDC, amount, "USDC", transactionId);
     }
 
-    function payLINK(uint256 amount) external {
-        _processPayment(LINK, amount, "LINK");
+    function payLINK(uint256 amount, uint256 transactionId) external {
+        _processPayment(LINK, amount, "LINK", transactionId);
     }
 
-    function _processPayment(address token, uint256 amount, string memory currency) private {
+    function _processPayment(address token, uint256 amount, string memory currency, uint256 transactionId) private {
         require(amount > 0, "Amount must be > 0");
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        emit PaymentReceived(msg.sender, amount, token, currency);
+        emit PaymentReceived(msg.sender, amount, token, currency, transactionId);
     }
-
+    
     // Retiro de fondos con mejoras
     function withdraw(address token, uint256 amount) external onlyOwner {
         if (token == address(0)) {

@@ -13,13 +13,15 @@ import { useAccount } from 'wagmi';
 import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
 import TransactionData from "../components/TransactionData";
+import { API_PATHS } from '@/config/paths';
+import axios from 'axios';
 
 
 const itemsPerPageOptions = createListCollection({
   items: [
-    { label: "5 por página", value: "5" },
     { label: "10 por página", value: "10" },
     { label: "20 por página", value: "20" },
+    { label: "30 por página", value: "30" },
   ],
 });
 
@@ -28,23 +30,23 @@ export function PaymentHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   useEffect(() => {
     if (address) {
       setIsLoading(true);
-      fetch(`http://localhost:8000/payments/transactions/${address}`)
-        .then(response => response.json())
-        .then(data => {
-          setTransactions(data.transactions);
-          setCurrentPage(1);
-        })
-        .catch(() => {
-          setTransactions([]);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+
+      axios.get(`${API_PATHS.payments}/transactions/${address}`)
+      .then(response => {
+        setTransactions(response.data.transactions);
+        setCurrentPage(1);
+      })
+      .catch(() => {
+        setTransactions([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
     }
   }, [address]);
 

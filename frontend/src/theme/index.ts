@@ -36,7 +36,7 @@ const customTheme = defineConfig({
       "--button-bg-color": "var(--ui-colors-blue-700)",
       "--button-hover-bg-color": "var(--ui-colors-blue-900)",
       "--separator": "#334155",
-      "--card-bg-color": "#1e293b",
+      "--card-bg-color": "#111111",
       "--card-border-color": "var(--ui-colors-blue-800)",      
       "--accent-color": "#818cf8",
       "--success-color": "#34d399",
@@ -58,21 +58,7 @@ const customTheme = defineConfig({
       borderColor: "var(--separator)",
       opacity: 0.7
     },
-    ".card": {
-      bg: "var(--card-bg-color)",
-      border: "1px solid var(--border-color)",
-      borderRadius: "12px",
-      p: "24px",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-      _dark: {
-        boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
-      },
-      transition: "all 0.3s ease",
-      _hover: {
-        transform: "translateY(-2px)",
-        boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-      }
-    },
+    
     ".cart-item" :{
       borderBottom: "1px solid var(--border-color)",
       padding: "8px",
@@ -152,19 +138,7 @@ const customTheme = defineConfig({
         fontSize: "0.8rem",
         marginTop: "0.25rem"
       },
-
-    //   "& button[type='submit']": {
-    //     bg: "var(--button-bg-color)",
-    //     color: "white",
-    //     _hover: {
-    //       bg: "var(--button-hover-bg-color)",
-    //       transform: "translateY(-1px)"
-    //     },
-    //     _active: {
-    //       transform: "translateY(0)"
-    //     }
-    //   }
-      },
+    },
 
     "table": {
       width: "100%",
@@ -220,16 +194,42 @@ const customTheme = defineConfig({
         bgColor: "var(--button-hover-bg-color)",
         boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.2)"
     },    
+
+    // ".card": {
+    //       bg: "var(--card-bg-color)",
+    //       border: "1px solid var(--border-color)",
+    //       borderRadius: "12px",
+    //       p: "24px",
+    //       boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    //       _dark: {
+    //         boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+    //       },
+    //       transition: "all 0.3s ease",
+    //       _hover: {
+    //         transform: "translateY(-2px)",
+    //         boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+    //       }
+    //     },
+
     ".chakra-card__root": {
       borderColor: "var(--card-border-color) !important",
       borderWidth: "1px",
       borderStyle: "solid",
+      bg: "var(--card-bg-color) !important",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+      _dark: {
+        boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+      },    
     }
   }
 });
+
+export default customTheme;
 
 export const customSystem = createSystem(
   defaultSystem._config,
   customTheme,
   { disableLayers: true }
 );
+
+// Update: npx @chakra-ui/cli typegen ./theme.ts
