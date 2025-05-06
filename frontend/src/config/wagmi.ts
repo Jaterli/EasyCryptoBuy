@@ -11,6 +11,6 @@ export const config = createConfig({
   connectors: [metaMask()],   // Conector para MetaMask
   transports: {
     [mainnet.id]: http(),      // Usa el proveedor por defecto de Ethereum
-    [sepolia.id]: http('https://eth-sepolia.g.alchemy.com/v2/gUwAJM2B5XvYHm4Bqbkx5FT3bdGa9bcj'),      // Usa el proveedor por defecto de Sepolia
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),      // Usa el proveedor por defecto de Sepolia
   },
 });

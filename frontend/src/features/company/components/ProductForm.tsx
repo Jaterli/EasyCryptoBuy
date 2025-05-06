@@ -7,8 +7,9 @@ import {
   Input,
   NumberInput,
   Stack,
+  Textarea,
 } from "@chakra-ui/react";
-import { Product } from "../../../shared/types/Product";
+import { Product } from "@/shared/types/types";
 
 interface Props {
   initialData?: Product;
@@ -21,7 +22,11 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
     initialData || { id: '', name: '', description: '', amount_usd: 0, quantity: 0 }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProduct({ ...product, [e.target.name]: e.target.value });
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
   };
 
@@ -43,21 +48,23 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
           <Input 
             name="name" 
             value={product.name} 
-            onChange={handleChange} 
+            onChange={handleInputChange} 
           />
         </Field.Root>
 
         <Field.Root>
           <Field.Label>Descripción</Field.Label>
-          <Input 
-            name="description" 
-            value={product.description} 
-            onChange={handleChange} 
+          <Textarea
+            name="description"
+            value={product.description}
+            onChange={handleTextareaChange}
+            resize="vertical"
+            rows={4}
           />
         </Field.Root>
+        
         <Flex justifyContent="space-between" alignItems="center" gap={4} mb={4}>
           <Field.Root>
-            
             <Field.Label>Monto (USD)</Field.Label>
             <NumberInput.Root
               value={product.amount_usd.toString()}

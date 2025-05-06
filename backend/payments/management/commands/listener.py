@@ -62,10 +62,10 @@ class Command(BaseCommand):
             logger.info(f"Evento recibido: {tx_hash}")
 
             max_retries = 5
-            base_delay = 2  # segundos
+            base_delay = 5  # segundos
 
             tx = None
-            await asyncio.sleep(5)
+            await asyncio.sleep(base_delay)
             for attempt in range(max_retries):
                 try:
                     tx = await sync_to_async(Transaction.objects.get)(transaction_hash=tx_hash)

@@ -8,7 +8,7 @@ import { Product } from "@/shared/types/types";
 
 export const ProductCatalogPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const { cart, addToCart } = useCart();
+  const { cart } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +24,6 @@ export const ProductCatalogPage = () => {
           <ProductCard 
             key={product.id} 
             product={product} 
-            onAddToCart={() => addToCart(product)} 
           />
         ))}
       </Grid>
