@@ -3,6 +3,7 @@ from pathlib import Path
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+
 from .utils.formatters import format_scientific_to_decimal
 from .models import Transaction, Cart, CartItem
 from reportlab.lib.pagesizes import letter
@@ -21,8 +22,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from users.models import UserProfile
-from .serializers import CartSerializer
-
+from .serializers import CartSerializer, TransactionSerializer
+from django.db import transaction
 
 
 @csrf_exempt
@@ -47,7 +48,7 @@ def verify_signature(request):
 
 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 @csrf_exempt
 def register_transaction(request):
     if request.method != 'POST':
@@ -97,6 +98,7 @@ def register_transaction(request):
         profile = UserProfile.objects.get(wallet_address=wallet_address)
         cart = Cart.objects.filter(user=profile).first()
 
+        # Crear la transacción
         tx = Transaction.objects.create(
             wallet_address=wallet_address,
             amount=amount,
@@ -106,13 +108,29 @@ def register_transaction(request):
             cart=cart
         )
 
-        # Resta de stock. La resta tendría que hacerse sobre el modelo products en la app company y solo cuando la transacción se haya marcado como confirmed.
-        # if cart:
-        #     for item in cart.items.all():
-        #         item.product.quantity = max(item.product.quantity - item.quantity, 0)
-        #         item.product.save()
+        # Generar y guardar el resumen de compra
+        if cart:
+            tx.purchase_summary = tx.generate_purchase_summary()
+            tx.save()
 
-        return JsonResponse({"success": True, "message": "Transacción registrada exitosamente"})
+            # Actualizar stock de productos
+            for item in cart.items.all():
+                product = item.product
+                product.quantity = max(product.quantity - item.quantity, 0)
+                product.save()
+
+            # # Crear registro de venta para cada producto
+            # for item in cart.items.all():
+            #     Sale.objects.create(
+            #         product=item.product,
+            #         customer_name=profile.name if profile.name else "",
+            #         customer_wallet=wallet_address,
+            #         usd_price=item.product.amount_usd,
+            #         token_symbol=token,
+            #         token_amount=amount,
+            #     )
+
+        return JsonResponse({"success": True, "message": "Transacción registrada exitosamente", "hash": transaction_hash})
 
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
@@ -120,7 +138,8 @@ def register_transaction(request):
         return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
-
+    
+    
     
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)
@@ -165,6 +184,7 @@ def generate_invoice(request, transaction_id):
     doc.build(elements)
     return response
 
+
 def get_user_transactions(request, wallet_address):
     transactions = get_list_or_404(
         Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
@@ -179,12 +199,30 @@ def get_user_transactions(request, wallet_address):
                 'transaction_hash': transaction.transaction_hash,
                 'created_at' : transaction.created_at,
                 'token': transaction.token,
+                'purchase_summary': transaction.purchase_summary,
             }
             for transaction in transactions
         ]
     }
     return JsonResponse(data)
 
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_transaction_details(request, tx_hash):
+    try:
+        transaction = Transaction.objects.get(transaction_hash=tx_hash)
+        serializer = TransactionSerializer(transaction)
+        return Response({
+            "success": True,
+            "transaction": serializer.data
+        })
+    except Transaction.DoesNotExist:
+        return Response({
+            "success": False,
+            "message": "Transacción no encontrada"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
 
 
 @require_GET
@@ -268,8 +306,10 @@ def clear_cart(request, wallet_address):
         return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        profile = UserProfile.objects.get(wallet_address=wallet)
-        CartItem.objects.filter(cart__user=profile).delete()
-        return Response({"success": True, "message": "Carrito limpiado"})
-    except UserProfile.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():  # Todas las operaciones se ejecutan o ninguna
+            profile = UserProfile.objects.get(wallet_address=wallet_address)
+            cart = Cart.objects.get(user=profile)
+            cart.delete_with_items()
+            return Response({"success": True, "message": "Carrito vaciado"})
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

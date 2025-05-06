@@ -82,7 +82,7 @@ export function Navbar() {
                 <Menu.ItemGroup>
                   <Menu.Item value="address" disabled>
                     <VStack align="flex-start" gap={1}>
-                      <Text fontSize="xs" color="gray.500">Tu dirección:</Text>
+                      <Text fontSize="xs" opacity={0.7}>Tu dirección:</Text>
                       <WalletAddress address={address} />
                     </VStack>
                   </Menu.Item>
@@ -192,7 +192,7 @@ export function Navbar() {
       <NavButton to="/products">Productos</NavButton>
       {isConnected && (
         <>
-          <NavButton to="/payments-history">Historial</NavButton>
+          <NavButton to="/payments-history">Historial de Compras</NavButton>
           <NavLink to="/cart-sumary">
             <Box px={2} py={1} _hover={{ bg: "transparent" }}>
               <CartIcon />

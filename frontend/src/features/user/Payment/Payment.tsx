@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { API_PATHS } from "@/config/paths";
-import { TransactionProp } from "@/shared/types/types";
+import { Transaction } from "@/shared/types/types";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -40,10 +40,10 @@ export function Payment() {
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
-  const [transactionData, setTransaction] = useState<TransactionProp | null>(null);
+  const [transactionData, setTransaction] = useState<Transaction | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
-  const [checkingStock, setCheckingStock] = useState(true);
+  const [checkingStock, setCheckingStock] = useState(false);
   const navigate = useNavigate();
 
   const { data: hash, writeContract, isPending: isTransactionPending, error: writeError } = useWriteContract();
@@ -63,82 +63,105 @@ export function Payment() {
   }, [writeError, showToast]);
 
   useEffect(() => {
-    const validateCart = async () => {
-      try {
-        const response = await fetch(`${API_PATHS.company}/validate-cart`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cart.map(item => ({ id: item.product.id, quantity: item.quantity })))
-        });
-        const result = await response.json();
-        setStockIssues(result.invalid || []);
-      } catch (error) {
-        console.error("Error validando stock", error);
-      } finally {
-        setCheckingStock(false);
-      }
-    };
-    validateCart();
+    if (cart && cart.length > 0) {
+      const validateCart = async () => {
+        setCheckingStock(true);
+        try {
+          const response = await fetch(`${API_PATHS.company}/validate-cart`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(cart.map(item => ({ id: item.product.id, quantity: item.quantity })))
+          });
+          const result = await response.json();
+          setStockIssues(result.invalid || []);
+        } catch (error) {
+          console.error("Error validando stock", error);
+        } finally {
+          setCheckingStock(false);
+        }
+      };
+      validateCart();
+    }
   }, [cart]);
 
-  const registerTransaction = useCallback(async () => {
-    if (!hash || !address || !pendingTx) return;
-    try {
-      const response = await fetch(`${API_PATHS.payments}/register-transaction`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: address,
-          amount: pendingTx.amount,
-          transaction_hash: hash,
-          token: pendingTx.token
-        })
-      });
-      const result = await response.json();
-      if (result.success) {
-        showToast('success', "Éxito", result.message);
-        setAmount("");
-        setTransaction({
-          transaction_hash: hash,
-          amount: pendingTx.amount,
-          created_at: new Date().toISOString(),
-          token: pendingTx.token,
-          status: "pending"
-        });
-        clearCart(); 
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showToast('error', "Error en el servidor", errorMessage);
-      setPendingTx(null);
-    }
-  }, [hash, address, pendingTx, showToast]);
-
   useEffect(() => {
-    if (isConfirmed) {
-      registerTransaction();
-      setPaymentCompleted(true);
+    if (isConfirmed && pendingTx) {
+      const registerAndFetchTransaction = async () => {
+        try {
+          // 1. Registrar la transacción
+          const registerResponse = await fetch(`${API_PATHS.payments}/register-transaction`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              wallet_address: address,
+              amount: pendingTx.amount,
+              transaction_hash: hash,
+              token: pendingTx.token
+            })
+          });
+          
+          const registerResult = await registerResponse.json();
+          
+          if (!registerResult.success) {
+            throw new Error(registerResult.message || "Error al registrar la transacción");
+          }
+  
+          // 2. Obtener los detalles después del registro exitoso
+          const detailsResponse = await fetch(`${API_PATHS.payments}/transaction-details/${hash}/`);
+          const detailsResult = await detailsResponse.json();
+          
+          if (detailsResult.success && detailsResult.transaction) {
+            clearCart();
+            setTransaction(detailsResult.transaction);
+            setPaymentCompleted(true);
+            showToast('success', "Éxito", registerResult.message);
+          } else {
+            throw new Error(detailsResult.message || "Error al obtener detalles de la transacción");
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+          showToast('error', "Error en el servidor", errorMessage);
+          setPendingTx(null);
+        }
+      };
+  
+      registerAndFetchTransaction();
     }
-  }, [isConfirmed, registerTransaction]);
+  }, [isConfirmed, hash, pendingTx, address]);
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (transactionData?.status === "pending") {
-      interval = setInterval(() => {
-        fetch(`${API_PATHS.payments}/transaction-details?txHash=${transactionData.transaction_hash}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success && data.transaction) {
-              setTransaction(data.transaction);
+    
+    if (paymentCompleted && transactionData && transactionData.status === 'pending') {
+      const fetchTransactionDetails = async () => {
+        try {
+          const response = await fetch(`${API_PATHS.payments}/transaction-details/${hash}/`);
+          const data = await response.json();
+          
+          if (data.success) {
+            setTransaction(data.transaction);
+            
+            // Detener el intervalo si el estado es 'confirmed'
+            if (data.transaction.status === 'confirmed') {
+              clearInterval(interval);
             }
-          })
-          .catch(console.error);
-      }, 10000);
+          }
+        } catch (error) {
+          console.error("Error fetching transaction details:", error);
+        }
+      };
+  
+      // Ejecutar inmediatamente y luego cada 10 segundos
+      fetchTransactionDetails();
+      interval = setInterval(fetchTransactionDetails, 10000);
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
     }
-    return () => interval && clearInterval(interval);
-  }, [transactionData]);
+  }, [hash, paymentCompleted]); 
+
 
   useEffect(() => {
     if (isApproveConfirmed && pendingTx && token !== "ETH") {
@@ -193,6 +216,16 @@ export function Payment() {
           args: [CONTRACT_ADDRESSES.PAYMENT, amountInUnits],
         });
       }
+
+
+      /*
+      Guardar un carrito temporalmente (crear un nuevo modelo, o un campo en el modelo Cart actual que indique que se inició el pago) hasta que se confirme la transacción por si el usuario abandona la página.
+      Si existe ese carrito temporal o el campo destinado a ello en el modelo Cart, significa que hay una transacción cuyo hash no ha sido registrado.
+      No permitiremos hacer otro pago al usuario hasta que se solvente este problema.
+      Entonces consultaremos automáticamente en la blockchain la ultima transacción desde la wallet registrada hacia la dirección del contrato.    
+      Si el monto coincide con el del carrito temporal, entonces se registra la transacción con el hash obtenido de la blockchain y se elimina el carrito (importante restar los productos del stock).
+      */
+
     } catch (error) {
       console.error("Error en transacción:", error);
       setPendingTx(null);
@@ -206,13 +239,13 @@ export function Payment() {
   if (paymentCompleted) {
     return (
       <Box p={5} mt={5} mb={5}>
-        <VStack gap={8} align="center">
+        <VStack spaceY={8} align="center">
           <Text color="green.500" fontSize="2xl" fontWeight="bold">
             ¡Compra realizada con éxito!
           </Text>
           {transactionData && (
             <Box width="100%" maxWidth="800px">
-              <TransactionData tx={transactionData} />
+              <TransactionData key={transactionData.id} tx={transactionData} />
             </Box>
           )}
           <Button 
@@ -229,16 +262,27 @@ export function Payment() {
 
   return (
     <Box p={5} mt={5} mb={5}>
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={{ base: "0", lg: "8" }}>
+      <Grid templateColumns={{ base: "1fr", lg: cart.length > 0 ? "1fr 1fr" : "1fr" }} gap={{ base: "0", lg: "8" }}>
         {/* Columna izquierda - Resumen del carrito */}
         <GridItem>
           <Box>
             <Heading size="lg" mb={6} textAlign="left">Resumen de tu compra</Heading>
             
             {cartLoading ? (
-              <Spinner size="md" />
+              <VStack>
+                <Spinner size="md" />
+                <Text>Cargando carrito...</Text>
+              </VStack>
             ) : cart.length === 0 ? (
-              <Text opacity={0.5}>Tu carrito está vacío.</Text>
+              <VStack spaceY={4} textAlign="center" py={8}>
+                <Text fontSize="xl" fontWeight="medium">Tu carrito está vacío</Text>
+                <Text color="gray.500">No hay productos para mostrar</Text>
+                <Button asChild colorPalette="blue" mt={4}>
+                  <a href="/products">
+                    Explorar productos
+                  </a>
+                </Button>
+              </VStack>
             ) : (
               <Stack align="stretch">
                 {cart.map((item) => (
@@ -246,7 +290,7 @@ export function Payment() {
                     <HStack align="flex-start" spaceX={4}>
                       <Box flexShrink={0}>
                         <Image 
-                          src={`https://picsum.photos/80?${item.product.name}`}
+                          src={`https://picsum.photos/seed/${item.product.name}/80`}
                           boxSize="80px"
                           objectFit="cover"
                           borderRadius="md"
@@ -289,12 +333,13 @@ export function Payment() {
           </Box>
 
           {/* Mensajes de stock */}
-          {checkingStock ? (
+          {cart.length > 0 && checkingStock && (
             <Box mt={4} textAlign="center">
               <Spinner size="lg" />
               <Text mt={2}>Verificando disponibilidad...</Text>
             </Box>
-          ) : stockIssues.length > 0 && (
+          )}
+          {cart.length > 0 && stockIssues.length > 0 && (
             <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200" bg="red.50">
               <Text color="red.600" fontWeight="bold" mb={2}>
                 No hay suficiente stock para los siguientes productos:
@@ -319,80 +364,82 @@ export function Payment() {
           )}
         </GridItem>
 
-        {/* Columna derecha - Formulario de pago */}
-        <GridItem>
-          <Box 
-            p={6}
-            position="sticky"
-            top="20px"
-          >
-            {!address ? (
-              <Text opacity={0.5} textAlign="center">Conecta tu wallet para continuar.</Text>
-            ) : isLoadingState || isApprovePending ? (
-              <VStack spaceY={4}>
-                <Spinner size="lg" />
-                <Text>
-                  {isApprovePending 
-                    ? "Esperando aprobación del token..." 
-                    : "Procesando tu transacción..."}
+        {/* Columna derecha - Formulario de pago (solo se muestra si hay items en el carrito) */}
+        {cart.length > 0 && (
+          <GridItem>
+            <Box 
+              p={6}
+              position="sticky"
+              top="20px"
+            >
+              {!address ? (
+                <Text opacity={0.5} textAlign="center">Conecta tu wallet para continuar.</Text>
+              ) : isLoadingState || isApprovePending ? (
+                <VStack spaceY={4}>
+                  <Spinner size="lg" />
+                  <Text>
+                    {isApprovePending 
+                      ? "Esperando aprobación del token..." 
+                      : "Procesando tu transacción..."}
+                  </Text>
+                </VStack>
+              ) : !isWalletRegistered ? (
+                <VStack spaceY={4}>
+                  <Text textAlign="center">
+                    Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, es necesario registrar la wallet y firmar un mensaje para verificar que eres el propietario.
+                  </Text>
+                  <Button 
+                    colorPalette="blue" 
+                    onClick={() => navigate("/register-wallet")}
+                    width="full"
+                  >
+                    Ir al registro de wallet
+                  </Button>
+                </VStack>
+              ) : !isConfirmed && (
+                <PaymentForm
+                  onSubmit={handlePayment}
+                  isProcessing={isLoadingState}
+                  selectedToken={token}
+                  setSelectedToken={setToken}
+                  amount={amount}
+                  setAmount={setAmount}
+                />
+              )}
+
+              {/* Mensajes de estado */}
+              {token !== 'ETH' && isApprovePending && (
+                <Text color="blue.500" mt={4} textAlign="center">
+                  Por favor, aprueba el límite de gasto en tu wallet
                 </Text>
-              </VStack>
-            ) : !isWalletRegistered ? (
-              <VStack spaceY={4}>
-                <Text textAlign="center">
-                  Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, es necesario registrar la wallet y firmar un mensaje para verificar que eres el propietario.
+              )}
+
+              {token !== 'ETH' && isApproving && (
+                <Text color="blue.500" mt={4} textAlign="center">
+                  Esperando confirmación de la aprobación...
                 </Text>
-                <Button 
-                  colorPalette="blue" 
-                  onClick={() => navigate("/register-wallet")}
-                  width="full"
-                >
-                  Ir al registro de wallet
-                </Button>
-              </VStack>
-            ) : (
-              <PaymentForm
-                onSubmit={handlePayment}
-                isProcessing={isLoadingState}
-                selectedToken={token}
-                setSelectedToken={setToken}
-                amount={amount}
-                setAmount={setAmount}
-              />
-            )}
+              )}
 
-            {/* Mensajes de estado */}
-            {token !== 'ETH' && isApprovePending && (
-              <Text color="blue.500" mt={4} textAlign="center">
-                Por favor, aprueba el límite de gasto en tu wallet
-              </Text>
-            )}
+              {token !== 'ETH' && approveError && (
+                <Text color="red.500" mt={4} textAlign="center">
+                  Error en la aprobación del límite de gasto
+                </Text>
+              )}
 
-            {token !== 'ETH' && isApproving && (
-              <Text color="blue.500" mt={4} textAlign="center">
-                Esperando confirmación de la aprobación...
-              </Text>
-            )}
+              {isTransactionPending && (
+                <Text color="blue.500" mt={4} textAlign="center">
+                  Por favor, confirma la transacción en tu wallet
+                </Text>
+              )}
 
-            {token !== 'ETH' && approveError && (
-              <Text color="red.500" mt={4} textAlign="center">
-                Error en la aprobación del límite de gasto
-              </Text>
-            )}
-
-            {isTransactionPending && (
-              <Text color="blue.500" mt={4} textAlign="center">
-                Por favor, confirma la transacción en tu wallet
-              </Text>
-            )}
-
-            {isConfirming && (
-              <Text color="blue.500" mt={4} textAlign="center">
-                Esperando confirmación en la blockchain...
-              </Text>
-            )}
-          </Box>
-        </GridItem>
+              {isConfirming && (
+                <Text color="blue.500" mt={4} textAlign="center">
+                  Esperando confirmación en la blockchain...
+                </Text>
+              )}
+            </Box>
+          </GridItem>
+        )}
       </Grid>
     </Box>
   );

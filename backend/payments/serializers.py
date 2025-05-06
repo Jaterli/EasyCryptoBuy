@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Cart, CartItem
+from .models import Cart, CartItem, Transaction
 from company.models import Product
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -34,3 +34,12 @@ class CartSerializer(serializers.ModelSerializer):
             CartItem.objects.create(cart=instance, **item_data)
         instance.save()
         return instance
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    purchase_summary = serializers.JSONField(read_only=True)
+    
+    class Meta:
+        model = Transaction
+        fields = ('id', 'transaction_hash', 'wallet_address', 'token', 'amount', 
+                 'status', 'created_at', 'purchase_summary')

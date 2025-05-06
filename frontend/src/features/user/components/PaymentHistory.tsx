@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Box, Flex, Table, Text, IconButton, Select, Portal, createListCollection } from '@chakra-ui/react';
-import { toaster } from "@/shared/components/ui/toaster";
-import { FaCopy, FaFileInvoice } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Text, 
+  IconButton, 
+  Select, 
+  Portal, 
+  createListCollection,
+  Stack,
+} from '@chakra-ui/react';
 import { useAccount } from 'wagmi';
-import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
 import WalletAddress from '@/shared/components/TruncatedAddress';
-
-interface Transaction {
-  id: number;
-  wallet_address: string;
-  amount: string;
-  status: string;
-  transaction_hash: string;
-  token: string;
-}
+import { Transaction } from '@/shared/types/types';
+import TransactionData from "../components/TransactionData";
 
 
 const itemsPerPageOptions = createListCollection({
@@ -38,7 +37,7 @@ export function PaymentHistory() {
         .then(response => response.json())
         .then(data => {
           setTransactions(data.transactions);
-          setCurrentPage(1); // Resetear a primera página al cargar nuevas transacciones
+          setCurrentPage(1);
         })
         .catch(() => {
           setTransactions([]);
@@ -49,22 +48,13 @@ export function PaymentHistory() {
     }
   }, [address]);
 
-  const handleDownloadInvoice = (transactionId: number) => {
-    window.open(`http://localhost:8000/payments/generate-invoice/${transactionId}/`, '_blank');
-  };
-
-  const copyToClipboard = (hash: string) => {
-    navigator.clipboard.writeText(hash);
-    toaster.create({ title: "Hash copiado", type: "success", duration: 2000});
-  };
-
   // Calcular transacciones para la página actual
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentTransactions = transactions.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
-  return (
+   return (
     <Box p={{ base: 3, md: 5 }}>
       <Flex 
         direction={{ base: "column", md: "row" }} 
@@ -82,56 +72,11 @@ export function PaymentHistory() {
         <Text>No se encontraron transacciones.</Text>
       ) : (
         <>
-          <Box overflowX="auto">
-            <Table.Root variant="outline" className='payments'>
-              <Table.Header>
-                <Table.Row fontSize={{base: "xs", md: "md"}}>
-                  <Table.ColumnHeader display={{ base: "none", md: "table-cell" }}>ID</Table.ColumnHeader>
-                  <Table.ColumnHeader>MONTO</Table.ColumnHeader>
-                  <Table.ColumnHeader>ESTADO</Table.ColumnHeader>
-                  <Table.ColumnHeader>HASH</Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign={{ base: "right", md: "left" }}>FACTURA</Table.ColumnHeader>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {currentTransactions.map((transaction) => (
-                  <Table.Row key={transaction.id}>
-                    <Table.Cell display={{ base: "none", md: "table-cell" }}>{transaction.id}</Table.Cell>
-                    <Table.Cell>{formatScientificToDecimal(transaction.amount)} {transaction.token}</Table.Cell>
-                    <Table.Cell>
-                      <Text fontSize={{ base: "sm", md: "md" }}>{transaction.status}</Text>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Flex align="center" gap={2} maxW="300px">
-                        <Text truncate display={{ base: "none", md: "inline" }}>
-                          {transaction.transaction_hash}
-                        </Text>
-                        <IconButton
-                          aria-label="Copiar hash"
-                          size={{ base: "xs", md: "md" }}
-                          onClick={() => copyToClipboard(transaction.transaction_hash)}
-                          variant="ghost"
-                        >
-                          <FaCopy />
-                        </IconButton>
-                      </Flex>
-                    </Table.Cell>
-                    <Table.Cell textAlign={{ base: "right", md: "left" }}>
-                      <IconButton
-                          aria-label="Copiar hash"
-                          title='Descargar factura'
-                          size={{ base: "xs", md: "md" }}
-                          onClick={() => handleDownloadInvoice(transaction.id)}
-                          variant="ghost"
-                        >
-                          <FaFileInvoice />
-                        </IconButton>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </Box>
+          <Stack gap={4}>
+            {currentTransactions.map((transaction) => (
+              <TransactionData key={transaction.id} tx={transaction} />
+            ))}
+          </Stack>
 
           {/* Controles de paginación */}
           <Flex justifyContent="space-between" alignItems="center" mt={4}>

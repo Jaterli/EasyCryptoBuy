@@ -7,7 +7,7 @@ interface ProductCardProps {
   onAddToCart?: () => void; // Prop opcional para manejar el evento de agregar al carrito
 }
 
-export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+export const ProductCard = ({ product }: ProductCardProps) => {
   const { cart, addToCart } = useCart();
   const item = cart.find(item => item.product.id === product.id);
   const currentQty = item?.quantity || 0;
@@ -15,13 +15,12 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   const handleAddToCart = () => {
     addToCart(product); // Lógica existente del contexto
-    onAddToCart?.(); // Llama a la función opcional si está presente
   };
 
   return (
     <Card.Root variant="elevated" width="100%" overflow="hidden">
       <Image
-        src={`https://picsum.photos/300?${product.name}`} // Mientras no exista image en el modelo product
+        src={`https://picsum.photos/seed/${product.name}/300`} // Mientras no exista image en el modelo product
         alt={product.name}
         height="200px"
         objectFit="cover"
