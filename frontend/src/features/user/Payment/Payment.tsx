@@ -11,6 +11,7 @@ import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { API_PATHS } from "@/config/paths";
 import { Transaction } from "@/shared/types/types";
+import axios from "axios";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -44,8 +45,8 @@ export function Payment() {
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
   const [checkingStock, setCheckingStock] = useState(false);
+  const [transaction_id, setTransactionId] = useState<number | null>(null);
   const navigate = useNavigate();
-
   const { data: hash, writeContract, isPending: isTransactionPending, error: writeError } = useWriteContract();
   const { data: approveHash, writeContract: writeApprove, isPending: isApprovePending, error: approveError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
@@ -57,23 +58,28 @@ export function Payment() {
 
   useEffect(() => {
     if (writeError) {
-      setPendingTx(null);
+      const cleanupFailedTransaction = async () => {
+        if (transaction_id) {
+          await deleteTransaction(transaction_id);
+          setTransactionId(null);
+        }
+        setPendingTx(null);
+      };
+      cleanupFailedTransaction();
       showToast('error', "Error en transacción", writeError.message);
     }
-  }, [writeError, showToast]);
+  }, [writeError, showToast, transaction_id]);
 
+  // 1. Validación del carrito
   useEffect(() => {
     if (cart && cart.length > 0) {
       const validateCart = async () => {
         setCheckingStock(true);
         try {
-          const response = await fetch(`${API_PATHS.company}/validate-cart`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cart.map(item => ({ id: item.product.id, quantity: item.quantity })))
-          });
-          const result = await response.json();
-          setStockIssues(result.invalid || []);
+          const response = await axios.post(`${API_PATHS.company}/validate-cart`, 
+            cart.map(item => ({ id: item.product.id, quantity: item.quantity }))
+          );
+          setStockIssues(response.data.invalid || []);
         } catch (error) {
           console.error("Error validando stock", error);
         } finally {
@@ -84,39 +90,39 @@ export function Payment() {
     }
   }, [cart]);
 
+  // 2. Actualización y obtención de detalles de transacción
   useEffect(() => {
     if (isConfirmed && pendingTx) {
-      const registerAndFetchTransaction = async () => {
+      const updateAndFetchTransaction = async () => {
         try {
-          // 1. Registrar la transacción
-          const registerResponse = await fetch(`${API_PATHS.payments}/register-transaction`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+          // Actualizar la transacción
+          const updateResponse = await axios.post(
+            `${API_PATHS.payments}/update-transaction/${transaction_id}`,
+            {
+              transaction_id: transaction_id,
               wallet_address: address,
               amount: pendingTx.amount,
               transaction_hash: hash,
               token: pendingTx.token
-            })
-          });
+            }
+          );
           
-          const registerResult = await registerResponse.json();
-          
-          if (!registerResult.success) {
-            throw new Error(registerResult.message || "Error al registrar la transacción");
+          if (!updateResponse.data.success) {
+            throw new Error(updateResponse.data.message || "Error al actualizar la transacción");
           }
   
-          // 2. Obtener los detalles después del registro exitoso
-          const detailsResponse = await fetch(`${API_PATHS.payments}/transaction-details/${hash}/`);
-          const detailsResult = await detailsResponse.json();
+          // Obtener detalles
+          const detailsResponse = await axios.get(
+            `${API_PATHS.payments}/transaction-details/${hash}`
+          );
           
-          if (detailsResult.success && detailsResult.transaction) {
+          if (detailsResponse.data.success && detailsResponse.data.transaction) {
             clearCart();
-            setTransaction(detailsResult.transaction);
+            setTransaction(detailsResponse.data.transaction);
             setPaymentCompleted(true);
-            showToast('success', "Éxito", registerResult.message);
+            showToast('success', "Éxito", updateResponse.data.message);
           } else {
-            throw new Error(detailsResult.message || "Error al obtener detalles de la transacción");
+            throw new Error(detailsResponse.data.message || "Error al obtener detalles de la transacción");
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -125,25 +131,26 @@ export function Payment() {
         }
       };
   
-      registerAndFetchTransaction();
+      updateAndFetchTransaction();
     }
-  }, [isConfirmed, hash, pendingTx, address]);
+  }, [isConfirmed, hash, pendingTx, address, showToast, transaction_id]);
 
 
+  // 3. Polling de estado de transacción
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (paymentCompleted && transactionData && transactionData.status === 'pending') {
       const fetchTransactionDetails = async () => {
         try {
-          const response = await fetch(`${API_PATHS.payments}/transaction-details/${hash}/`);
-          const data = await response.json();
+          const response = await axios.get(
+            `${API_PATHS.payments}/transaction-details/${hash}`
+          );
           
-          if (data.success) {
-            setTransaction(data.transaction);
+          if (response.data.success) {
+            setTransaction(response.data.transaction);
             
-            // Detener el intervalo si el estado es 'confirmed'
-            if (data.transaction.status === 'confirmed') {
+            if (response.data.transaction.status === 'confirmed') {
               clearInterval(interval);
             }
           }
@@ -152,7 +159,6 @@ export function Payment() {
         }
       };
   
-      // Ejecutar inmediatamente y luego cada 10 segundos
       fetchTransactionDetails();
       interval = setInterval(fetchTransactionDetails, 10000);
       
@@ -161,7 +167,6 @@ export function Payment() {
       };
     }
   }, [hash, paymentCompleted]); 
-
 
   useEffect(() => {
     if (isApproveConfirmed && pendingTx && token !== "ETH") {
@@ -174,10 +179,26 @@ export function Payment() {
         address: CONTRACT_ADDRESSES.PAYMENT,
         abi: ContractABI,
         functionName: paymentFunctionName,
-        args: [amountInUnits],
+        args: [amountInUnits, transaction_id],
       });
     }
   }, [isApproveConfirmed, pendingTx, token, writeContract]);
+
+
+  // Función para eliminar una transacción
+  const deleteTransaction = async (transactionId: number) => {
+    try {
+      const response = await axios.delete(`${API_PATHS.payments}/delete-transaction/${transactionId}`);
+      if (response.data.success) {
+        return true;
+      }
+      throw new Error(response.data.message || 'Error al eliminar la transacción');
+    } catch (error) {
+      console.error('Error eliminando transacción:', error);
+      showToast('error', "Error", "No se pudo eliminar la transacción fallida");
+      return false;
+    }
+  };
 
   const convertToTokenUnits = useCallback((amount: string, tokenType: keyof typeof TOKEN_DECIMALS) => {
     const sanitizedAmount = amount.includes('.') ? amount : `${amount}.0`;
@@ -186,6 +207,7 @@ export function Payment() {
     return BigInt(`${integerPart}${decimals}`);
   }, []);
 
+  // 4. Registro de transacción inicial
   const handlePayment = async (amount: string, token: keyof typeof TOKEN_DECIMALS) => {
     if (!address) {
       showToast('error', "Error", "Por favor, conecta tu wallet primero.");
@@ -197,15 +219,36 @@ export function Payment() {
       return;
     }
     try {
+      // Registrar transacción pendiente sin hash
+      const registerResponse = await axios.post(
+        `${API_PATHS.payments}/register-transaction`,
+        {
+          wallet_address: address,
+          amount,
+          transaction_hash: address, // temporal
+          token,
+          status: "pending"
+        }
+      );
+
+      // if (!registerResponse.data.success) {
+      //   showToast('error', "Error al registrar", registerResponse.data.message || "Error desconocido al registrar transacción");
+      //   return;
+      // }
+
+      setTransactionId(registerResponse.data.transaction_id);
+
       const txData: PendingTransaction = { amount, token };
       setPendingTx(txData);
+
       const amountInUnits = convertToTokenUnits(amount, token);
+
       if (token === "ETH") {
         await writeContract({
           address: CONTRACT_ADDRESSES.PAYMENT,
           abi: ContractABI,
           functionName: "payETH",
-          args: [],
+          args: [registerResponse.data.transaction_id],
           value: amountInUnits,
         });
       } else {
@@ -217,19 +260,14 @@ export function Payment() {
         });
       }
 
-
-      /*
-      Guardar un carrito temporalmente (crear un nuevo modelo, o un campo en el modelo Cart actual que indique que se inició el pago) hasta que se confirme la transacción por si el usuario abandona la página.
-      Si existe ese carrito temporal o el campo destinado a ello en el modelo Cart, significa que hay una transacción cuyo hash no ha sido registrado.
-      No permitiremos hacer otro pago al usuario hasta que se solvente este problema.
-      Entonces consultaremos automáticamente en la blockchain la ultima transacción desde la wallet registrada hacia la dirección del contrato.    
-      Si el monto coincide con el del carrito temporal, entonces se registra la transacción con el hash obtenido de la blockchain y se elimina el carrito (importante restar los productos del stock).
-      */
-
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        showToast('error', "Error", error.response.data?.message || "Error en el servidor");
+      } else {
+        showToast('error', "Error en transacción", error instanceof Error ? error.message : "Error en el registro de la transacción");
+      }
       console.error("Error en transacción:", error);
       setPendingTx(null);
-      showToast('error', "Error en transacción", error instanceof Error ? error.message : "Error desconocido");
     }
   };
 

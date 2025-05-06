@@ -47,21 +47,80 @@ def verify_signature(request):
     return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
 
 
-
-# logger = logging.getLogger(__name__)
 @csrf_exempt
-def register_transaction(request):
+def register_transaction(request):    
     if request.method != 'POST':
         return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
-
     try:
         data = json.loads(request.body)
+        wallet_address = data.get("wallet_address")
+        amount = data.get("amount")
+        token = data.get("token")
+
+        if not all([wallet_address, amount, token]):
+            return JsonResponse({"success": False, "message": "Faltan campos necesarios"}, status=400)
+
+        try:
+            amount = Decimal(amount)
+        except (TypeError, InvalidOperation):
+            return JsonResponse({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
+
+        # Usar wallet_address como valor temporal para transaction_hash
+        transaction_hash = wallet_address.lower()
+
+        # Evitar múltiples transacciones huérfanas
+        if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
+            return JsonResponse({"success": False, "message": "Ya hay una transacción pendiente para esta wallet"}, status=409)
+
+        # Obtener perfil de usuario y su carrito
+        try:
+            profile = UserProfile.objects.get(wallet_address=wallet_address)
+        except UserProfile.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
+
+        cart = Cart.objects.filter(user=profile).first()
+
+        # Crear transacción huérfana con wallet como hash
+        tx = Transaction.objects.create(
+            wallet_address=wallet_address,
+            amount=amount,
+            transaction_hash=transaction_hash,
+            token=token,
+            status='pending',
+            cart=cart
+        )
+
+        # Generar resumen de compra (sin tocar stock aún)
+        if cart:
+            tx.purchase_summary = tx.generate_purchase_summary()
+            tx.save()
+
+        return JsonResponse({
+            "success": True,
+            "message": "Transacción provisional registrada",
+            "transaction_id": tx.id,
+            "hash_placeholder": transaction_hash
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@csrf_exempt
+def update_transaction(request, transaction_id):    
+    if request.method != 'POST':
+        return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+        transaction_id = data.get("transaction_id")
         wallet_address = data.get("wallet_address")
         amount = data.get("amount")
         transaction_hash = data.get("transaction_hash")
         token = data.get("token")
 
-        if not all([wallet_address, amount, transaction_hash, token]):
+        if not all([transaction_id, wallet_address, amount, transaction_hash, token]):
             return JsonResponse({"success": False, "message": "Faltan campos necesarios"}, status=400)
 
         try:
@@ -92,26 +151,30 @@ def register_transaction(request):
         except Exception:
             return JsonResponse({"success": False, "message": "No se pudo verificar el remitente de la transacción"}, status=500)
 
-        if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
-            return JsonResponse({"success": False, "message": "La transacción ya ha sido registrada"}, status=409)
+        # Buscar la transacción existente
+        try:
+            tx = Transaction.objects.get(id=transaction_id)
+        except Transaction.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Transacción no encontrada"}, status=404)
+
+        # Verificar que no exista otra transacción con el mismo hash
+        if Transaction.objects.exclude(id=tx.id).filter(transaction_hash=transaction_hash).exists():
+            return JsonResponse({"success": False, "message": "El hash ya está registrado en otra transacción"}, status=409)
 
         profile = UserProfile.objects.get(wallet_address=wallet_address)
         cart = Cart.objects.filter(user=profile).first()
 
-        # Crear la transacción
-        tx = Transaction.objects.create(
-            wallet_address=wallet_address,
-            amount=amount,
-            transaction_hash=transaction_hash,
-            token=token,
-            status='pending',
-            cart=cart
-        )
+        # Actualizar los campos de la transacción
+        tx.wallet_address = wallet_address
+        tx.amount = amount
+        tx.transaction_hash = transaction_hash
+        tx.token = token
+        tx.status = 'pending'
+        tx.cart = cart
 
         # Generar y guardar el resumen de compra
         if cart:
             tx.purchase_summary = tx.generate_purchase_summary()
-            tx.save()
 
             # Actualizar stock de productos
             for item in cart.items.all():
@@ -119,27 +182,59 @@ def register_transaction(request):
                 product.quantity = max(product.quantity - item.quantity, 0)
                 product.save()
 
-            # # Crear registro de venta para cada producto
-            # for item in cart.items.all():
-            #     Sale.objects.create(
-            #         product=item.product,
-            #         customer_name=profile.name if profile.name else "",
-            #         customer_wallet=wallet_address,
-            #         usd_price=item.product.amount_usd,
-            #         token_symbol=token,
-            #         token_amount=amount,
-            #     )
+        tx.save()
 
-        return JsonResponse({"success": True, "message": "Transacción registrada exitosamente", "hash": transaction_hash})
+        return JsonResponse({"success": True, "message": "Transacción actualizada exitosamente", "hash": transaction_hash})
 
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
     except UserProfile.DoesNotExist:
         return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
     except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
+        return JsonResponse({"success": False, "message": str(e)}, status=500)    
     
+
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
+def delete_transaction(request):
+    transaction_id = request.data.get('transaction_id')
+    transaction_hash = request.data.get('transaction_hash')
     
+    if not transaction_id and not transaction_hash:
+        return Response(
+            {"success": False, "message": "Se requiere transaction_id o transaction_hash"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        if transaction_id:
+            transaction = Transaction.objects.get(id=transaction_id)
+        else:
+            transaction = Transaction.objects.get(transaction_hash=transaction_hash)
+        
+        if transaction.status != 'pending':
+            return Response(
+                {"success": False, "message": "Solo se pueden eliminar transacciones pendientes"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        transaction.delete()
+        return Response(
+            {"success": True, "message": "Transacción eliminada correctamente"},
+            status=status.HTTP_200_OK
+        )
+        
+    except Transaction.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Transacción no encontrada"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"success": False, "message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
     
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)

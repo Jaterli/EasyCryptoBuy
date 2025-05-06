@@ -108,7 +108,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!address) return;
     
     try {
-      await fetch(`${API_PATHS.payments}/clear-cart/${address}/`, {
+      await fetch(`${API_PATHS.payments}/clear-cart/${address}`, {
         method: "DELETE"
       });
       setCart([]);

@@ -17,6 +17,7 @@ import { toaster } from "@/shared/components/ui/toaster";
 import { FaCopy, FaFileInvoice, FaChevronDown, FaChevronUp, FaShoppingCart } from 'react-icons/fa';
 import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
 import { Transaction } from '@/shared/types/types';
+import { API_PATHS } from '@/config/paths';
 
 
 interface TransactionDataProps {
@@ -40,7 +41,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
     };
 
     const handleDownloadInvoice = (transactionId: number) => {
-    window.open(`http://localhost:8000/payments/generate-invoice/${transactionId}/`, '_blank');
+    window.open(`${API_PATHS.payments}/generate-invoice/${transactionId}/`, '_blank');
     };
 
     const copyToClipboard = (hash: string) => {
@@ -59,7 +60,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
     const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({});
 
     return (
-        <Card.Root key={tx.id} variant="outline">
+        <Card.Root key={tx.id}>
         <Card.Body>
             <VStack align="stretch" spaceY={3}>
             <Stack 
@@ -107,13 +108,13 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                 <Text fontSize="sm" truncate>
                     {tx.transaction_hash}
                     <IconButton
-                aria-label="Copiar hash"                                 
-                size="xs"
-                variant="ghost"
-                onClick={() => copyToClipboard(tx.transaction_hash)}
-                >
-                <FaCopy />
-                </IconButton>
+                    aria-label="Copiar hash"                                 
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(tx.transaction_hash)}
+                    >
+                    <FaCopy />
+                    </IconButton>
                 </Text>
                 {tx.purchase_summary && (
                     <IconButton
