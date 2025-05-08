@@ -74,7 +74,7 @@ export default function Home() {
                 <VStack align="flex-start" spaceY={4}>
                     <Box width="full">
                     <Text fontWeight="bold" mb={{ base: 1, md: 0 }}>Conectado con:</Text>
-                    <HStack>
+                    <HStack truncate>
                         <WalletAddress address={address} />
                         <IconButton
                         aria-label="Copiar dirección"

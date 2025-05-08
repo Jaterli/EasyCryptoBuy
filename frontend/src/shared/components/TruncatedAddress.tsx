@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { HStack, Text, IconButton } from "@chakra-ui/react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { HStack, Text } from "@chakra-ui/react";
 
 const truncateAddress = (address: string, startLength = 6, endLength = 4): string => {
   if (!address) return "";
@@ -9,21 +8,13 @@ const truncateAddress = (address: string, startLength = 6, endLength = 4): strin
 };
 
 const WalletAddress = ({ address }: { address: string }) => {
-  const [isTruncated, setIsTruncated] = useState(true);
+  const [isTruncated, setIsTruncated] = useState(false);
 
   return (
     <HStack>
-      <Text fontFamily="mono" fontSize={{ base: "xs", md: "lg" }} onClick={() => setIsTruncated(!isTruncated)}>
+      <Text fontFamily="mono" truncate fontSize={{ base: "sm", md: "lg" }} onClick={() => setIsTruncated(!isTruncated)}>
         {isTruncated ? truncateAddress(address) : address}
       </Text>
-      {/* <IconButton
-          aria-label={isTruncated ? "Mostrar completa" : "Ocultar"}
-          size="xs"
-          variant="ghost"
-          onClick={() => setIsTruncated(!isTruncated)}
-        >
-          {isTruncated ? <FaEye /> : <FaEyeSlash />}
-        </IconButton> */}
     </HStack>
   );
 };

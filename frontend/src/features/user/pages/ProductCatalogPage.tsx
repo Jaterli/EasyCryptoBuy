@@ -3,17 +3,46 @@ import { Box, Heading, Grid, Button } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { ProductCard } from "../components/ProductCard";
-import { fetchProducts } from "@/features/company/api/products";
 import { Product } from "@/shared/types/types";
+import { API_PATHS } from "@/config/paths";
+import axios from "axios";
 
 export const ProductCatalogPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { cart } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get<Product[]>(
+          `${API_PATHS.company}/products/`
+        );
+        setProducts(response.data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error al cargar los productos"
+        );
+        console.error("Error fetching products:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
+
+  if (isLoading) {
+    return <Box padding="6">Cargando productos...</Box>;
+  }
+
+  if (error) {
+    return <Box padding="6">Error: {error}</Box>;
+  }
+
 
   return (
     <Box padding="6">

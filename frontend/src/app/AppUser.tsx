@@ -28,7 +28,7 @@ export const AppUser = () => {
           <Container px={{ base: 0, md: 4, lg: 8 }} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
             <Routes>
               <Route path="/dashboard" element={<Home />} />
-              <Route path="/products" element={<ProductCatalogPage />} />
+              <Route path="/products-catalog" element={<ProductCatalogPage />} />
               <Route path="/cart-sumary" element={<CartSummaryPage />} />
               <Route path="/payments-history" element={<RequireWallet><RequireRegistration><PaymentHistory /></RequireRegistration></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><RequireRegistration>
@@ -38,7 +38,7 @@ export const AppUser = () => {
                     {/* </ResettableComponent> */}
                 {/* </RequireSignature> */}
                 </RequireRegistration></RequireWallet>} />
-              <Route path="/register-wallet" element={<RegisterWalletPage />} />
+              <Route path="/register-wallet" element={<RequireWallet><RegisterWalletPage /></RequireWallet>} />
               <Route path="/sign-wallet" element={<RequireWallet><SignWalletPage /></RequireWallet>} />
               <Route path="*" element={<NotFoundPage />} />              
             </Routes>

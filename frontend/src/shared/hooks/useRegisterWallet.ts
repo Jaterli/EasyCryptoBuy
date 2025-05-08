@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toaster } from "@/shared/components/ui/toaster";
+import { API_PATHS } from "@/config/paths";
 
 interface FormData {
   name: string;
@@ -11,7 +12,7 @@ export function useRegisterWallet(address: string | undefined) {
     if (!address) return;
 
     try {
-      const response = await fetch("http://localhost:8000/users/register-wallet", {
+      const response = await fetch(`${API_PATHS.users}/register-wallet`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

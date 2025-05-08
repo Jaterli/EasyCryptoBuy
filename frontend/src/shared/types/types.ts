@@ -1,3 +1,16 @@
+export interface CartContextType {
+  cart: CartItem[];
+  addToCart: (product: Product) => Promise<void>;
+  removeFromCart: (id: string) => Promise<void>;
+  clearCart: () => Promise<void>;
+  setCart: (items: CartItem[]) => void;
+  cartLoading: boolean;
+  setCartLoading: (loading: boolean) => void;
+  pendingTransactions: Transaction[];
+  checkPendingTransactions: () => Promise<void>;
+  cartError: boolean;
+}
+
 export interface CartItem {
     product: Product;
     quantity: number;
@@ -23,6 +36,7 @@ export interface ApiCartItem {
 export interface Transaction {
     id: number;
     transaction_hash: string;
+    wallet_address: string;    
     amount: string;
     created_at: string;
     token: string;

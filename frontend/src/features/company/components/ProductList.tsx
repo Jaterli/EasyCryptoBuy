@@ -22,9 +22,9 @@ import { Product } from "@/shared/types/types";
 
 const itemsPerPageOptions = createListCollection({
   items: [
-    { label: "5 por página", value: "5" },
     { label: "10 por página", value: "10" },
     { label: "20 por página", value: "20" },
+    { label: "30 por página", value: "30" },
   ],
 });
 
@@ -33,7 +33,7 @@ export const ProductList: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const { open: isDialogOpen, onOpen, onClose } = useDisclosure();
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -268,7 +268,7 @@ export const ProductList: React.FC = () => {
                 setCurrentPage(1);
               }}
               size="sm"
-              width="140px"
+              width="150px"
             >
               <Select.HiddenSelect />
               <Select.Control>

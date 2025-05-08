@@ -186,7 +186,8 @@ PAYMENT_CONTRACT_ADDRESS = os.getenv('PAYMENT_CONTRACT_ADDRESS')
 TOKEN_ADDRESSES = {
     'USDC': os.getenv('USDC_ADDRESS'),
     'USDT': os.getenv('USDT_ADDRESS'),
-    'LINK': os.getenv('LINK_ADDRESS')
+    'LINK': os.getenv('LINK_ADDRESS'),
+    'ETH': os.getenv('ETH_ADDRESS'),
 }
 
 PAYMENT_CONTRACT_ABI = [

@@ -36,7 +36,7 @@ export function PaymentHistory() {
     if (address) {
       setIsLoading(true);
 
-      axios.get(`${API_PATHS.payments}/transactions/${address}`)
+      axios.get(`${API_PATHS.payments}/get-user-transactions/${address}`)
       .then(response => {
         setTransactions(response.data.transactions);
         setCurrentPage(1);
@@ -116,7 +116,7 @@ export function PaymentHistory() {
                 setCurrentPage(1);
               }}
               size="sm"
-              width="140px"
+              width="150px"
             >
               <Select.HiddenSelect />
               <Select.Control>
