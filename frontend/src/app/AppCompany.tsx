@@ -5,10 +5,10 @@ import { AdminAuthProvider } from "@/shared/context/AdminAuthContext";
 import RequireAdminAuth from "@/shared/context/RequireAdminAuth";
 import { SalesHistory } from "@/features/company/components/SalesHistory";
 import NotFoundPage from "@/features/company/pages/NotFoundPage";
-import AdminLoginPage from "@/features/auth/pages/AdminLoginPage";
 import { Toaster } from "@/shared/components/ui/toaster";
 import Footer from "@/shared/components/Footer";
 import { NavbarCompany } from "@/features/company/components/NavbarCompany";
+import AdminLoginPage from "@/features/company/auth/pages/AdminLoginPage";
 
 export const AppCompany = () => {
   const minHeight = useBreakpointValue({ base: "100vh", md: "auto" });

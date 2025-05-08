@@ -1,7 +1,6 @@
 from django.db import models
 from users.models import UserProfile
 from company.models import Product
-import json
 
 class Transaction(models.Model):
     transaction_hash = models.CharField(max_length=66, unique=True)

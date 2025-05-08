@@ -153,16 +153,16 @@ export function Navbar() {
                     </>
                   )}
 
-                  <NavButton to="/products">Productos</NavButton>
+                  <NavButton to="/products-catalog">Productos</NavButton>
                   
                   {isConnected && (
                     <>
                       <NavButton to="/payments-history">Historial de Compras</NavButton>
-                      <NavButton to="/cart-sumary">
-                        <CartIcon /> Carrito
-                      </NavButton>
                     </>
                   )}
+                  <NavButton to="/cart-sumary">
+                    <CartIcon /> Carrito
+                  </NavButton>
 
                   <Button
                     width="full"
@@ -189,17 +189,18 @@ export function Navbar() {
 
   const renderDesktopMenu = () => (
     <HStack gap={4}>
-      <NavButton to="/products">Productos</NavButton>
+      <NavButton to="/products-catalog">Productos</NavButton>
       {isConnected && (
         <>
           <NavButton to="/payments-history">Historial de Compras</NavButton>
-          <NavLink to="/cart-sumary">
-            <Box px={2} py={1} _hover={{ bg: "transparent" }}>
-              <CartIcon />
-            </Box>
-          </NavLink>
         </>
       )}
+      <NavLink to="/cart-sumary">
+        <Box px={2} py={1} _hover={{ bg: "transparent" }}>
+          <CartIcon />
+        </Box>
+      </NavLink>
+
       <WalletStatus />
       <ColorModeButton size="md" />
     </HStack>

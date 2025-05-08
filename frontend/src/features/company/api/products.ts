@@ -1,36 +1,38 @@
-import { authFetch } from "@/features/auth/api/authFetch";
-import { Product } from "../../../shared/types/Product";
 import { API_PATHS } from "@/config/paths";
+import { Product } from "@/shared/types/types";
+import { authAxios } from "../auth/api/authAdminAxios";
 
 const API_PRODUCTS = `${API_PATHS.company}/products/`;
 
 export async function fetchProducts(): Promise<Product[]> {
-  const res = await authFetch(API_PRODUCTS);
-  if (!res.ok) throw new Error("Error al obtener productos");
-  return res.json();
+  try {
+    const { data } = await authAxios.get(API_PRODUCTS);
+    return data;
+  } catch (error) {
+    throw new Error("Error al obtener productos. "+error);
+  }
 }
 
-
 export async function createProduct(product: Omit<Product, "id">): Promise<void> {
-  const res = await authFetch(API_PRODUCTS, {
-    method: "POST",
-    body: JSON.stringify(product),
-  });
-  if (!res.ok) throw new Error("Error al crear producto");
+  try {
+    await authAxios.post(API_PRODUCTS, product);
+  } catch (error) {
+    throw new Error("Error al crear producto. "+error);
+  }
 }
 
 export async function updateProduct(id: string, product: Product): Promise<void> {
-  const res = await authFetch(`${API_PRODUCTS}${id}/`, {
-    method: "PUT",
-    body: JSON.stringify(product),
-  });
-  
-  if (!res.ok) throw new Error("Error al actualizar producto");
+  try {
+    await authAxios.put(`${API_PRODUCTS}${id}/`, product);
+  } catch (error) {
+    throw new Error("Error al actualizar producto. "+error);
+  }
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const res = await authFetch(`${API_PRODUCTS}${id}/`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Error al eliminar producto");
+  try {
+    await authAxios.delete(`${API_PRODUCTS}${id}/`);
+  } catch (error) {
+    throw new Error("Error al eliminar producto. "+error);
+  }
 }

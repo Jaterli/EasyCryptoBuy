@@ -1,30 +1,26 @@
 from decimal import Decimal, InvalidOperation
-from pathlib import Path
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-
 from .utils.formatters import format_scientific_to_decimal
 from .models import Transaction, Cart, CartItem
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 from django.shortcuts import get_object_or_404
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.shortcuts import get_list_or_404
-import logging
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from web3 import Web3
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from users.models import UserProfile
 from .serializers import CartSerializer, TransactionSerializer
 from django.db import transaction
-
+from users.decorators import wallet_required
 
 @csrf_exempt
 def verify_signature(request):
@@ -66,7 +62,7 @@ def register_transaction(request):
             return JsonResponse({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
         # Usar wallet_address como valor temporal para transaction_hash
-        transaction_hash = wallet_address.lower()
+        transaction_hash = wallet_address
 
         # Evitar múltiples transacciones huérfanas
         if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
@@ -108,13 +104,14 @@ def register_transaction(request):
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
+# DEBERIA SER PUT, NO POST
 @csrf_exempt
 def update_transaction(request, transaction_id):    
     if request.method != 'POST':
         return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
     try:
         data = json.loads(request.body)
-        transaction_id = data.get("transaction_id")
+        transaction_id = transaction_id
         wallet_address = data.get("wallet_address")
         amount = data.get("amount")
         transaction_hash = data.get("transaction_hash")
@@ -195,23 +192,11 @@ def update_transaction(request, transaction_id):
     
 
 @api_view(["DELETE"])
-@permission_classes([AllowAny])
-def delete_transaction(request):
-    transaction_id = request.data.get('transaction_id')
-    transaction_hash = request.data.get('transaction_hash')
-    
-    if not transaction_id and not transaction_hash:
-        return Response(
-            {"success": False, "message": "Se requiere transaction_id o transaction_hash"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
+@wallet_required
+def delete_transaction(request, transaction_id):
     try:
-        if transaction_id:
-            transaction = Transaction.objects.get(id=transaction_id)
-        else:
-            transaction = Transaction.objects.get(transaction_hash=transaction_hash)
-        
+        transaction = Transaction.objects.get(id=transaction_id, user=request.user)  # Filtro por usuario
+
         if transaction.status != 'pending':
             return Response(
                 {"success": False, "message": "Solo se pueden eliminar transacciones pendientes"},
@@ -235,7 +220,32 @@ def delete_transaction(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def check_pending_transactions(request, wallet_address):
+    try:
+        # Verificar si hay transacciones pendientes para esta wallet
+        pending_transactions = Transaction.objects.filter(
+            wallet_address=wallet_address,
+            status='pending'
+        ).order_by('-created_at')
+        
+        serializer = TransactionSerializer(pending_transactions, many=True)
+        
+        return Response({
+            "success": True,
+            "has_pending": pending_transactions.exists(),
+            "transactions": serializer.data
+        })
+        
+    except Exception as e:
+        return Response({
+            "success": False,
+            "message": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)
     response = HttpResponse(content_type='application/pdf')
@@ -279,7 +289,8 @@ def generate_invoice(request, transaction_id):
     doc.build(elements)
     return response
 
-
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def get_user_transactions(request, wallet_address):
     transactions = get_list_or_404(
         Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')

@@ -5,12 +5,17 @@ import {
   Text,
   Field,
   NativeSelect,
-  IconButton
+  Button,
+  Dialog,
+  IconButton,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useTokenPrices } from "@/shared/hooks/useTokenPrices";
 import { useCart } from "@/features/user/context/CartContext";
+import { toaster } from "@/shared/components/ui/toaster";
 import { GrTransaction } from "react-icons/gr";
+import { useWallet } from "@/shared/context/useWallet";
 
 type Token = "USDT" | "USDC" | "ETH" | "LINK";
 
@@ -21,6 +26,8 @@ interface PaymentFormProps {
   setSelectedToken: (token: Token) => void;
   amount: string;
   setAmount: (amount: string) => void;
+  isWalletRegistered: boolean | null;
+  isAuthenticated : boolean,
 }
 
 const TOKEN_OPTIONS = [
@@ -33,15 +40,20 @@ const TOKEN_OPTIONS = [
 export function PaymentForm({ 
   onSubmit, 
   isProcessing, 
-  amount, 
   selectedToken, 
   setSelectedToken, 
-  setAmount 
+  amount, 
+  setAmount,
+  isWalletRegistered,
+  isAuthenticated,
 }: PaymentFormProps) {
   const { prices: tokenPrices, loading: isTokenLoading } = useTokenPrices();
   const { cart } = useCart();
-
+  const { authenticate } = useWallet();  
+  const { open: isAuthDialogOpen, onOpen: openAuthDialog, onClose: closeAuthDialog } = useDisclosure();  
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [totalUSD, setTotalUSD] = useState(0);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
     const total = cart.reduce((acc, item) => acc + item.product.amount_usd * item.quantity, 0);
@@ -55,38 +67,64 @@ export function PaymentForm({
     setAmount(calculatedAmount);
   }, [totalUSD, selectedToken, tokenPrices, setAmount]);
 
-  const handlePayment = () => {
-    if (!amount || isNaN(Number(amount))) {
-      alert("Por favor, introduce un monto válido");
-      return;
+
+  const handleAuthAndPayment = async () => {
+    try {
+      if (!isAuthenticated) {
+        setShowAuthDialog(true);
+        return;
+      }
+        // Si ya está autenticado, proceder directamente al pago
+        await onSubmit(amount, selectedToken);
+
+      } catch (error) {
+      toaster.create({
+        title: "Error",
+        description: `Error al iniciar el pago: ${error instanceof Error ? error.message : ''}`,
+        type: "error",
+        duration: 3000,
+      });
     }
-    onSubmit(amount, selectedToken);
+  }
+
+  const handleAuthConfirm = async () => {
+    setIsAuthLoading(true);
+    try {
+      const authSuccess = await authenticate();
+      if (authSuccess) {
+        closeAuthDialog();
+        await onSubmit(amount, selectedToken);
+      }
+    } catch (error) {
+      toaster.create({
+        title: "Error de autenticación",
+        description: error instanceof Error ? error.message : "No se pudo autenticar",
+        type: "error",
+        duration: 3000,
+      });
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   return (
-    <Box 
-      p={6} 
-      boxShadow="md"
-      width="100%"
-      maxW="500px"
-      className="form"
-    >
+    <Box p={6} boxShadow="md" width="100%" maxW="500px" className="form">
       <VStack spaceY={5} align="stretch">
 
         <Field.Root>
           <Field.Label fontWeight="medium" mb={2} color="gray.600" _dark={{ color: "gray.300" }}>
             Selecciona un token
           </Field.Label>
-          <NativeSelect.Root>
+          <NativeSelect.Root disabled={isProcessing || isAuthLoading}>
             <NativeSelect.Field
-            value={selectedToken}
-            onChange={(e) => setSelectedToken(e.currentTarget.value as Token)}
-          >
-            {TOKEN_OPTIONS.map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
+              value={selectedToken}
+              onChange={(e) => setSelectedToken(e.currentTarget.value as Token)}
+            >
+              {TOKEN_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
           </NativeSelect.Root>
         </Field.Root>
 
@@ -110,17 +148,57 @@ export function PaymentForm({
           </Text>
         )}
 
-        <IconButton
+        {!isAuthenticated && (
+          <Text fontSize="sm" color="orange.500" textAlign="center">
+            Debes autenticarte para realizar el pago
+          </Text>
+        )}
+
+      <IconButton
           colorPalette="blue"
-          onClick={handlePayment}        
-          disabled={isProcessing || !amount}
-          loading={isProcessing}
-          loadingText="Procesando..."
+          onClick={handleAuthAndPayment}        
+          disabled={isProcessing || !amount || !isWalletRegistered}
+          loading={isProcessing || isAuthLoading}
+          loadingText={"Procesando..."}
           mt={4}
+          aria-label="Confirmar pago"
         >
           <GrTransaction />
-          Pagar
+          {isAuthenticated ? "Confirmar Pago" : "Autenticar y Pagar"}
         </IconButton>
+
+        {/* Dialog de autenticación */}
+        <Dialog.Root open={showAuthDialog} onOpenChange={(e) => !e.open && setShowAuthDialog(false)}>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Firma Requerida</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text>Por favor, firma el mensaje en tu wallet para confirmar la transacción.</Text>
+                {!isWalletRegistered && (
+                  <Text mt={2} color="red.500">
+                    Debes registrar tu wallet primero
+                  </Text>
+                )}
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </Dialog.ActionTrigger>
+                <Button 
+                  colorPalette="blue" 
+                  onClick={handleAuthConfirm}
+                  loading={isAuthLoading}
+                  disabled={!isWalletRegistered}
+                >
+                  Firmar Mensaje
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Dialog.Root>
       </VStack>
     </Box>
   );

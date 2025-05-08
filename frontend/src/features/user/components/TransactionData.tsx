@@ -106,7 +106,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
             </Stack>
             <HStack direction={'row'} justify={'space-between'}>
                 <Text fontSize="sm" truncate>
-                    {tx.transaction_hash}
+                    {(tx.transaction_hash === tx.wallet_address) ? "Hash sin registrar" : tx.transaction_hash}
                     <IconButton
                     aria-label="Copiar hash"                                 
                     size="xs"
