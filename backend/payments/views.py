@@ -5,11 +5,10 @@ import json
 from .utils.formatters import format_scientific_to_decimal
 from .models import Transaction, Cart, CartItem
 from reportlab.lib.pagesizes import letter
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, get_list_or_404
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from django.shortcuts import get_list_or_404
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from web3 import Web3
@@ -21,181 +20,155 @@ from users.models import UserProfile
 from .serializers import CartSerializer, TransactionSerializer
 from django.db import transaction
 from users.decorators import wallet_required
+from eth_account.messages import encode_defunct
+from eth_account import Account
 
-@csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def verify_signature(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            address = data['address']
-            message = data['message']
-            signature = data['signature']
-
-            encoded_message = encode_defunct(text=message)
-            recovered_address = Account.recover_message(encoded_message, signature=signature)
-
-            if recovered_address.lower() == address.lower():
-                return JsonResponse({'success': True, 'message': 'Firma verificada correctamente.'})
-            else:
-                return JsonResponse({'success': False, 'message': 'La firma no es válida.'}, status=400)
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
-    return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
-
-
-@csrf_exempt
-def register_transaction(request):    
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
     try:
-        data = json.loads(request.body)
-        wallet_address = data.get("wallet_address")
-        amount = data.get("amount")
-        token = data.get("token")
+        data = request.data
+        address = data['address']
+        message = data['message']
+        signature = data['signature']
 
-        if not all([wallet_address, amount, token]):
-            return JsonResponse({"success": False, "message": "Faltan campos necesarios"}, status=400)
+        encoded_message = encode_defunct(text=message)
+        recovered_address = Account.recover_message(encoded_message, signature=signature)
 
-        try:
-            amount = Decimal(amount)
-        except (TypeError, InvalidOperation):
-            return JsonResponse({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
-
-        # Usar wallet_address como valor temporal para transaction_hash
-        transaction_hash = wallet_address
-
-        # Evitar múltiples transacciones huérfanas
-        if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
-            return JsonResponse({"success": False, "message": "Ya hay una transacción pendiente para esta wallet"}, status=409)
-
-        # Obtener perfil de usuario y su carrito
-        try:
-            profile = UserProfile.objects.get(wallet_address=wallet_address)
-        except UserProfile.DoesNotExist:
-            return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
-
-        cart = Cart.objects.filter(user=profile).first()
-
-        # Crear transacción huérfana con wallet como hash
-        tx = Transaction.objects.create(
-            wallet_address=wallet_address,
-            amount=amount,
-            transaction_hash=transaction_hash,
-            token=token,
-            status='pending',
-            cart=cart
-        )
-
-        # Generar resumen de compra (sin tocar stock aún)
-        if cart:
-            tx.purchase_summary = tx.generate_purchase_summary()
-            tx.save()
-
-        return JsonResponse({
-            "success": True,
-            "message": "Transacción provisional registrada",
-            "transaction_id": tx.id,
-            "hash_placeholder": transaction_hash
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
+        if recovered_address.lower() == address.lower():
+            return Response({'success': True, 'message': 'Firma verificada correctamente.'})
+        else:
+            return Response({'success': False, 'message': 'La firma no es válida.'}, status=400)
     except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
+        return Response({'success': False, 'message': str(e)}, status=500)
 
 
-# DEBERIA SER PUT, NO POST
-@csrf_exempt
-def update_transaction(request, transaction_id):    
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def register_transaction(request):
+    data = request.data
+    wallet_address = data.get("wallet_address")
+    amount = data.get("amount")
+    token = data.get("token")
+
+    if not all([wallet_address, amount, token]):
+        return Response({"success": False, "message": "Faltan campos necesarios"}, status=400)
+
     try:
-        data = json.loads(request.body)
-        transaction_id = transaction_id
-        wallet_address = data.get("wallet_address")
-        amount = data.get("amount")
-        transaction_hash = data.get("transaction_hash")
-        token = data.get("token")
+        amount = Decimal(amount)
+    except (TypeError, InvalidOperation):
+        return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
-        if not all([transaction_id, wallet_address, amount, transaction_hash, token]):
-            return JsonResponse({"success": False, "message": "Faltan campos necesarios"}, status=400)
+    transaction_hash = wallet_address
 
-        try:
-            amount = Decimal(amount)
-        except (TypeError, InvalidOperation):
-            return JsonResponse({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
+    if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
+        return Response({"success": False, "message": "Ya hay una transacción pendiente para esta wallet"}, status=409)
 
-        provider_url = getattr(settings, 'WEB3_PROVIDER', None)
-        if not provider_url:
-            return JsonResponse({"success": False, "message": "WEB3_PROVIDER_URL no configurado"}, status=500)
-
-        web3 = Web3(Web3.HTTPProvider(provider_url))
-        if not web3.is_connected():
-            return JsonResponse({"success": False, "message": "No se pudo conectar a la red Ethereum"}, status=500)
-
-        try:
-            tx_receipt = web3.eth.get_transaction_receipt(transaction_hash)
-        except Exception:
-            return JsonResponse({"success": False, "message": "Transacción no encontrada"}, status=404)
-
-        if tx_receipt is None or tx_receipt.status != 1:
-            return JsonResponse({"success": False, "message": "Transacción fallida o no confirmada"}, status=400)
-
-        try:
-            tx = web3.eth.get_transaction(transaction_hash)
-            if tx['from'].lower() != wallet_address.lower():
-                return JsonResponse({"success": False, "message": "La dirección no coincide con el remitente"}, status=400)
-        except Exception:
-            return JsonResponse({"success": False, "message": "No se pudo verificar el remitente de la transacción"}, status=500)
-
-        # Buscar la transacción existente
-        try:
-            tx = Transaction.objects.get(id=transaction_id)
-        except Transaction.DoesNotExist:
-            return JsonResponse({"success": False, "message": "Transacción no encontrada"}, status=404)
-
-        # Verificar que no exista otra transacción con el mismo hash
-        if Transaction.objects.exclude(id=tx.id).filter(transaction_hash=transaction_hash).exists():
-            return JsonResponse({"success": False, "message": "El hash ya está registrado en otra transacción"}, status=409)
-
+    try:
         profile = UserProfile.objects.get(wallet_address=wallet_address)
-        cart = Cart.objects.filter(user=profile).first()
+    except UserProfile.DoesNotExist:
+        return Response({"success": False, "message": "Usuario no encontrado"}, status=404)
 
-        # Actualizar los campos de la transacción
-        tx.wallet_address = wallet_address
-        tx.amount = amount
-        tx.transaction_hash = transaction_hash
-        tx.token = token
-        tx.status = 'pending'
-        tx.cart = cart
+    cart = Cart.objects.filter(user=profile).first()
 
-        # Generar y guardar el resumen de compra
-        if cart:
-            tx.purchase_summary = tx.generate_purchase_summary()
+    tx = Transaction.objects.create(
+        wallet_address=wallet_address,
+        amount=amount,
+        transaction_hash=transaction_hash,
+        token=token,
+        status='pending',
+        cart=cart
+    )
 
-            # Actualizar stock de productos
-            for item in cart.items.all():
-                product = item.product
-                product.quantity = max(product.quantity - item.quantity, 0)
-                product.save()
-
+    if cart:
+        tx.purchase_summary = tx.generate_purchase_summary()
         tx.save()
 
-        return JsonResponse({"success": True, "message": "Transacción actualizada exitosamente", "hash": transaction_hash})
+    return Response({
+        "success": True,
+        "message": "Transacción provisional registrada",
+        "transaction_id": tx.id,
+        "hash_placeholder": transaction_hash
+    })
 
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "message": "JSON inválido"}, status=400)
-    except UserProfile.DoesNotExist:
-        return JsonResponse({"success": False, "message": "Usuario no encontrado"}, status=404)
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)    
-    
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def update_transaction(request, transaction_id):
+    data = request.data
+    wallet_address = data.get("wallet_address")
+    amount = data.get("amount")
+    transaction_hash = data.get("transaction_hash")
+    token = data.get("token")
+
+    if not all([transaction_id, wallet_address, amount, transaction_hash, token]):
+        return Response({"success": False, "message": "Faltan campos necesarios"}, status=400)
+
+    try:
+        amount = Decimal(amount)
+    except (TypeError, InvalidOperation):
+        return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
+
+    provider_url = getattr(settings, 'WEB3_PROVIDER', None)
+    if not provider_url:
+        return Response({"success": False, "message": "WEB3_PROVIDER_URL no configurado"}, status=500)
+
+    web3 = Web3(Web3.HTTPProvider(provider_url))
+    if not web3.is_connected():
+        return Response({"success": False, "message": "No se pudo conectar a la red Ethereum"}, status=500)
+
+    try:
+        tx_receipt = web3.eth.get_transaction_receipt(transaction_hash)
+    except Exception:
+        return Response({"success": False, "message": "Transacción no encontrada"}, status=404)
+
+    if tx_receipt is None or tx_receipt.status != 1:
+        return Response({"success": False, "message": "Transacción fallida o no confirmada"}, status=400)
+
+    try:
+        tx_data = web3.eth.get_transaction(transaction_hash)
+        if tx_data['from'].lower() != wallet_address.lower():
+            return Response({"success": False, "message": "La dirección no coincide con el remitente"}, status=400)
+    except Exception:
+        return Response({"success": False, "message": "No se pudo verificar el remitente de la transacción"}, status=500)
+
+    try:
+        tx = Transaction.objects.get(id=transaction_id)
+    except Transaction.DoesNotExist:
+        return Response({"success": False, "message": "Transacción no encontrada"}, status=404)
+
+    if Transaction.objects.exclude(id=tx.id).filter(transaction_hash=transaction_hash).exists():
+        return Response({"success": False, "message": "El hash ya está registrado en otra transacción"}, status=409)
+
+    profile = UserProfile.objects.get(wallet_address=wallet_address)
+    cart = Cart.objects.filter(user=profile).first()
+
+    tx.wallet_address = wallet_address
+    tx.amount = amount
+    tx.transaction_hash = transaction_hash
+    tx.token = token
+    tx.status = 'pending'
+    tx.cart = cart
+
+    if cart:
+        tx.purchase_summary = tx.generate_purchase_summary()
+        for item in cart.items.all():
+            product = item.product
+            product.quantity = max(product.quantity - item.quantity, 0)
+            product.save()
+
+    tx.save()
+
+    return Response({"success": True, "message": "Transacción actualizada exitosamente", "hash": transaction_hash})
+
+
 
 @api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
 @wallet_required
 def delete_transaction(request, transaction_id):
     try:
-        transaction = Transaction.objects.get(id=transaction_id, user=request.user)  # Filtro por usuario
+        transaction = Transaction.objects.get(id=transaction_id)
 
         if transaction.status != 'pending':
             return Response(
@@ -246,6 +219,7 @@ def check_pending_transactions(request, wallet_address):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
+@permission_classes([AllowAny])
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)
     response = HttpResponse(content_type='application/pdf')
@@ -289,6 +263,7 @@ def generate_invoice(request, transaction_id):
     doc.build(elements)
     return response
 
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_user_transactions(request, wallet_address):
@@ -330,7 +305,7 @@ def get_transaction_details(request, tx_hash):
         }, status=status.HTTP_404_NOT_FOUND)
     
 
-
+@permission_classes([AllowAny])
 @require_GET
 def transaction_details(request):
     """
@@ -404,18 +379,39 @@ def save_cart(request):
     except UserProfile.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+
 @api_view(["DELETE"])
 @permission_classes([AllowAny])
-def clear_cart(request, wallet_address):
+def delete_cart(request, wallet_address):
     wallet = wallet_address
     if not wallet:
         return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        with transaction.atomic():  # Todas las operaciones se ejecutan o ninguna
+        with transaction.atomic():  # Todas las operaciones se ejecutan o ninguna. transaction viene de django.db
             profile = UserProfile.objects.get(wallet_address=wallet_address)
             cart = Cart.objects.get(user=profile)
             cart.delete_with_items()
-            return Response({"success": True, "message": "Carrito vaciado"})
+            return Response({"success": True, "message": "Carrito eliminado"})
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
+def clear_cart(request, wallet_address):
+    if not wallet_address:
+        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        with transaction.atomic():
+            profile = UserProfile.objects.get(wallet_address=wallet_address)
+            cart = Cart.objects.get(user=profile)
+            cart.items.all().delete()  # Solo eliminamos los ítems
+            return Response({"success": True, "message": "Ítems del carrito eliminados"})
+    except UserProfile.DoesNotExist:
+        return Response({"error": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    except Cart.DoesNotExist:
+        return Response({"error": "Carrito no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,5 +1,6 @@
 import { API_PATHS } from '@/config/paths';
 import axios from 'axios';
+import { authUserAxios } from '../auth/authUserAxios';
 
 export const authAPI = {
   getNonce: (wallet: string) => 
@@ -17,22 +18,34 @@ export const authAPI = {
     axios.get(`${API_PATHS.users}/check-wallet/${wallet}`)
 };
 
-export const paymentsAPI = {
-
-  validateCart: (data: any) => 
-    axios.post(`${API_PATHS.company}/validate-cart`, data),
+export const axiosAPI = {
 
   registerTransaction: (data: any) => 
-    axios.post(`${API_PATHS.payments}/register-transaction`, data),
+    authUserAxios.post(`${API_PATHS.payments}/register-transaction`, data),
   
   updateTransaction: (id: number, data: any) => 
-    axios.post(`${API_PATHS.payments}/update-transaction/${id}`, data),
+    authUserAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, data),
   
   getTransactionDetails: (hash: `0x${string}` | undefined) => 
     axios.get(`${API_PATHS.payments}/transaction-details/${hash}`),
   
   deleteTransaction: (id: number) => 
-    axios.delete(`${API_PATHS.payments}/delete-transaction/${id}`)
+    authUserAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),
+
+  validateCart: (data: any) => 
+    axios.post(`${API_PATHS.company}/validate-cart`, data),
+
+  saveCart: (data: any) => 
+    authUserAxios.post(`${API_PATHS.payments}/save-cart`, data),
+
+  clearCart: (address: string) =>
+    authUserAxios.delete(`${API_PATHS.payments}/clear-cart/${address}`),
+
+  deleteCart: (address: string) =>
+    authUserAxios.delete(`${API_PATHS.payments}/delete-cart/${address}`),  
+
+  checkPendingTransactions: (address: string) =>
+    authUserAxios.get(`${API_PATHS.payments}/check-pending-transactions/${address}`)
 };
 
 // Interceptor para manejar errores globalmente

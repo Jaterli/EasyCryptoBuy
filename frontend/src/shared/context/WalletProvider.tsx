@@ -1,9 +1,8 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { toaster } from "@/shared/components/ui/toaster";
-import axios from "axios";
-import { API_PATHS } from "@/config/paths";
 import { authAPI } from "@/features/user/services/api";
+import { ApiError } from "../types/types";
 
 interface AuthState {
   accessToken: string | null;
@@ -55,9 +54,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!address) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(
-        `${API_PATHS.users}/check-wallet/${address}`
-      );
+      const response = await authAPI.checkWallet(address);
       setIsWalletRegistered(response.data.isRegistered);
     } catch (error) {
       console.error("Error: "+error);
@@ -69,24 +66,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const trySilentAuth = async () => {
     if (!address) return false;
-    const storedToken = localStorage.getItem('user_access_token');
+    const storedToken = localStorage.getItem('userToken');
     if (!storedToken) return false;
 
     try {
       // Verificar token con el backend
-      const response = await axios.get(
-        `${API_PATHS.users}/verify-token`,
-        {
-          headers: {
-            Authorization: `Bearer ${storedToken}`
-          }
-        }
-      );
+      console.log("Verificando token con el backend...")
+      const response = await authAPI.verifyToken(storedToken);
       
       if (response.data.isValid && response.data.wallet.toLowerCase() === address.toLowerCase()) {
+        console.log("Token validado.")
         setAuthState({
           accessToken: storedToken,
-          refreshToken: localStorage.getItem('user_refresh_token'),
+          refreshToken: localStorage.getItem('userRefreshToken'),
           wallet: address
         });
         return true;
@@ -127,8 +119,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
       // 5. Guardar tokens
       const { access_token, refresh_token } = authResponse.data;
-      localStorage.setItem('user_access_token', access_token);
-      localStorage.setItem('user_refresh_token', refresh_token);
+      localStorage.setItem('userToken', access_token);
+      localStorage.setItem('userRefreshToken', refresh_token);
       
       setAuthState({
         accessToken: access_token,
@@ -138,12 +130,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       return true;
     } catch (error) {
+
+      const apiError = error as ApiError;
+      const errorMessage = apiError.response.data.message;
+      
       toaster.create({
         title: "Error de autenticación [Provider]",
-        description: error instanceof Error ? error.message : "No se pudo autenticar",
+        description: errorMessage ? errorMessage : "No se pudo autenticar",
         type: "error",
         duration: 3000
       });
+      console.error("Error en transacción:", errorMessage);
+
       return false;
     } finally {
       setIsLoading(false);
@@ -151,8 +149,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const clearAuth = () => {
-    localStorage.removeItem('user_access_token');
-    localStorage.removeItem('user_refresh_token');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRefreshToken');
     setAuthState({
       accessToken: null,
       refreshToken: null,

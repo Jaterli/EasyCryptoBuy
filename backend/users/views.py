@@ -16,10 +16,18 @@ from hexbytes import HexBytes
 from web3 import Web3
 from eth_account.messages import encode_defunct
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from django_ratelimit.decorators import ratelimit
 
+@ratelimit(key='user', rate='5/m')  # 5 peticiones por minuto por IP
 @api_view(['GET'])
 @permission_classes([AllowAny]) 
 def get_wallet_nonce(request, wallet_address):
+   
+    if getattr(request, 'limited', False):
+        return Response({'error': 'Too many requests'}, status=429)
+        
     nonce = str(uuid.uuid4())
     # Guardar el nonce temporalmente (5 min) asociado a la wallet
     cache.set(f"wallet_nonce_{wallet_address}", nonce, timeout=300)
@@ -41,7 +49,7 @@ def wallet_auth(request):
     try:
         # Verificar wallet
         if not Web3.is_address(wallet):
-            return Response({'error': 'Invalid wallet address'}, status=400)
+            return Response({'message': 'Invalid wallet address'}, status=400)
             
         # Parsear mensaje JSON
         try:
@@ -53,21 +61,22 @@ def wallet_auth(request):
             domain = message_data.get('domain', '')
             
             if not all([texto, nonce, timestamp]):
-                return Response({'error': 'Missing required message fields'}, status=400)
+                return Response({'success': False, 'message': 'Missing required message fields'}, status=400)
                 
         except json.JSONDecodeError:
-            return Response({'error': 'Message must be valid JSON'}, status=400)
+            return Response({'success': False, 'message': 'Message must be valid JSON'}, status=400)
         except Exception as e:
-            return Response({'error': f'Message parsing error: {str(e)}'}, status=400)
+            return Response({'success': False, 'message': f'Message parsing error: {str(e)}'}, status=400)
             
         # Verificar timestamp (2 minutos de validez)
         if int(time.time()) - int(timestamp) > 120:
-            return Response({'error': 'Message expired'}, status=400)
+            return Response({'success': False, 'message': 'Message expired'}, status=400)
             
         # Verificar nonce en caché
         cached_nonce = cache.get(f"wallet_nonce_{wallet}")
         if cached_nonce != nonce:
-            return Response({'error': 'Invalid or expired nonce'}, status=401)
+            logger.warning(f"Invalid nonce for {wallet}: cached={cached_nonce}, received={nonce}")
+            return Response({'success': False, 'message': 'Invalid or expired nonce'}, status=401)
             
         # Verificar firma con el mensaje completo
         w3 = Web3()
@@ -78,18 +87,18 @@ def wallet_auth(request):
         )
         
         if recovered_addr != wallet:
-            return Response({'error': 'Signature verification failed'}, status=401)
+            return Response({'success': False, 'message': 'Signature verification failed'}, status=401)
             
         # Verificar dominio si es necesario
         allowed_domains = ["localhost"]  # Configurar según necesidad
         if domain and allowed_domains and domain not in allowed_domains:
-            return Response({'error': 'Unauthorized domain'}, status=403)
+            return Response({'success': False, 'message': 'Unauthorized domain'}, status=403)
             
         # Obtener usuario
         try:
             profile = UserProfile.objects.get(wallet_address__iexact=wallet)
         except UserProfile.DoesNotExist:
-            return Response({'error': 'Wallet not registered'}, status=401)
+            return Response({'success': False, 'message': 'Wallet not registered'}, status=401)
             
         # Invalidar nonce
         cache.delete(f"wallet_nonce_{wallet}")
@@ -100,14 +109,49 @@ def wallet_auth(request):
         refresh['auth_type'] = 'wallet'
         
         return Response({
+            'success': True, 
             'access_token': str(refresh.access_token),
             'refresh_token': str(refresh)
         })
         
     except Exception as e:
         logger.error(f"Auth error: {str(e)}", exc_info=True)
-        return Response({'error': 'Authentication failed'}, status=500)    
+        return Response({'success': False, 'message': 'Authentication failed'}, status=500)    
     
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def verify_token(request):
+    token = request.META.get('HTTP_AUTHORIZATION', '').split('Bearer ')[-1]
+    
+    if not token:
+        return Response(
+            {'valid': False, 'error': 'Token no proporcionado'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Validar el token
+        auth = JWTAuthentication()
+        validated_token = auth.get_validated_token(token)
+        user = auth.get_user(validated_token)
+        
+        # Opcional: Verificar datos adicionales en el token
+        wallet = validated_token.get('wallet', '')
+        
+        return Response({
+            'valid': True,
+            'user_id': user.id,
+            'wallet': wallet,
+            'exp': validated_token['exp']  # Tiempo de expiración
+        })
+        
+    except (InvalidToken, TokenError) as e:
+        return Response(
+            {'valid': False, 'error': str(e)},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
 
 @csrf_exempt
 def register_wallet(request):

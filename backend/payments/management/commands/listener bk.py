@@ -54,74 +54,37 @@ class Command(BaseCommand):
                 logger.warning(f"Error: {e}. Reintentando conexión en {wait_time}s...")
                 await asyncio.sleep(wait_time)
                 retry_count = min(retry_count + 1, max_retries)
-      
 
     async def handle_payment_event(self, context, contract):
         log = context.result
         try:
-            event = contract.events.PaymentReceived().process_log(log)
-            id = event['args']['transactionId']
-            sender_address = event['args']['sender'].lower()
             tx_hash = "0x" + log['transactionHash'].hex()
-
-            logger.info(f"Evento recibido: TX Hash {tx_hash}, Transaction ID {id}, Sender {sender_address}")
+            logger.info(f"Evento recibido: {tx_hash}")
 
             max_retries = 5
             base_delay = 5  # segundos
 
             tx = None
             await asyncio.sleep(base_delay)
-
             for attempt in range(max_retries):
                 try:
-                    tx = await sync_to_async(
-                        Transaction.objects.get
-                    )(
-                        id=id,
-                        wallet_address__iexact=sender_address
-                    )
+                    tx = await sync_to_async(Transaction.objects.get)(transaction_hash=tx_hash)
                     break
                 except Transaction.DoesNotExist:
-                    if attempt == max_retries - 1:  # Último intento fallido
-                        # Buscar la transacción para marcarla como fallida
-                        tx_failed = await sync_to_async(
-                            Transaction.objects.filter(
-                                id=id,
-                                wallet_address__iexact=sender_address
-                            ).first
-                        )()
-                        if tx_failed:
-                            tx_failed.status = 'failed'
-                            await sync_to_async(tx_failed.save)()
-                            logger.error(f"Transacción {id} marcada como FAILED (no encontrada en blockchain)")
-                        else:
-                            logger.error(f"Transacción {id} no existe en la base de datos")
-                        return
-
                     delay = base_delay * (2 ** attempt)
                     logger.warning(f"Transacción no encontrada (intento {attempt + 1}/{max_retries}). Reintentando en {delay}s...")
                     await asyncio.sleep(delay)
 
+            if tx is None:
+                logger.error(f"Transacción {tx_hash} no existe después de {max_retries} intentos.")
+                return
+
             if tx.status == 'confirmed':
-                logger.info(f"Transacción {tx.id} ya confirmada.")
+                logger.info(f"Transacción {tx_hash} ya confirmada.")
             else:
                 tx.status = 'confirmed'
-                tx.transaction_hash = tx_hash
-
-                # Generar resumen de compra antes de eliminar el carrito
-                summary = await sync_to_async(tx.generate_purchase_summary)()
-                tx.purchase_summary = summary
-
                 await sync_to_async(tx.save)()
-                logger.info(f"Transacción {tx.id} confirmada y guardada.")
-
-                # Eliminar carrito y sus ítems si existe
-                if tx.cart:
-                    await sync_to_async(tx.cart.delete_with_items)()
-                    logger.info(f"Carrito {tx.cart_id} eliminado tras confirmación de transacción.")
-
+                logger.info(f"Transacción {tx_hash} confirmada.")
 
         except Exception as e:
-            logger.error(f"Error procesando evento: {e}")
-
-
+            logger.error(f"Error procesando evento para transacción {tx_hash}: {e}")

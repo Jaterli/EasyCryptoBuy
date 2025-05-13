@@ -90,9 +90,11 @@ export function PaymentForm({
   const handleAuthConfirm = async () => {
     setIsAuthLoading(true);
     try {
+      console.log("Intentando autenticar...")
       const authSuccess = await authenticate();
       if (authSuccess) {
         closeAuthDialog();
+        console.log("Usuario autenticado.")
         await onSubmit(amount, selectedToken);
       }
     } catch (error) {
@@ -144,13 +146,8 @@ export function PaymentForm({
         
         {!isTokenLoading && tokenPrices[selectedToken] && (
           <Text fontSize="sm" color="blue.500" textAlign="center">
-            1 USD ≈ {(1 / tokenPrices[selectedToken]).toFixed(6)} {selectedToken}
-          </Text>
-        )}
-
-        {!isAuthenticated && (
-          <Text fontSize="sm" color="orange.500" textAlign="center">
-            Debes autenticarte para realizar el pago
+            1 USD ≈ {(1 / tokenPrices[selectedToken]).toFixed(6)} {selectedToken} <br />
+            1 {selectedToken} ≈ {(tokenPrices[selectedToken]).toFixed(6)}
           </Text>
         )}
 
@@ -176,7 +173,7 @@ export function PaymentForm({
                 <Dialog.Title>Firma Requerida</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Text>Por favor, firma el mensaje en tu wallet para confirmar la transacción.</Text>
+                <Text>Por favor, firma el mensaje en tu wallet para realizar una transacción segura.</Text>
                 {!isWalletRegistered && (
                   <Text mt={2} color="red.500">
                     Debes registrar tu wallet primero

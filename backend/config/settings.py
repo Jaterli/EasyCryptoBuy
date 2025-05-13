@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 REST_FRAMEWORK = {
@@ -78,12 +79,18 @@ CORS_ALLOWED_ORIGINS = [
     #"eth.merkle.io",
 ]
 
-# CORS_ALLOW_ALL_ORIGINS = True
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # Caché en memoria
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 
 ROOT_URLCONF = 'config.urls'
 

@@ -3,11 +3,10 @@ export interface CartContextType {
   addToCart: (product: Product) => Promise<void>;
   removeFromCart: (id: string) => Promise<void>;
   clearCart: () => Promise<void>;
+  deleteCart: () => Promise<void>;  
   setCart: (items: CartItem[]) => void;
   cartLoading: boolean;
   setCartLoading: (loading: boolean) => void;
-  pendingTransactions: Transaction[];
-  checkPendingTransactions: () => Promise<void>;
   cartError: boolean;
 }
 
@@ -55,3 +54,13 @@ export interface Transaction {
     };
   }
   
+
+export interface ApiError extends Error {
+  response: {
+      status: number;
+      data: {
+        success?: boolean;
+        message: string
+      };
+    };
+  }
