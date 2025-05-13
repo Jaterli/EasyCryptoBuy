@@ -18,6 +18,7 @@ async function refreshUserToken(): Promise<string> {
   const refresh = localStorage.getItem("userRefreshToken");
 
   try {
+    console.log("Intentando refrescar token");
     const { data } = await userApi.post("/api/token/refresh/", { refresh });
     localStorage.setItem("userToken", data.access);
     return data.access;
@@ -58,7 +59,8 @@ userApi.interceptors.response.use(
         localStorage.removeItem("userToken");
         localStorage.removeItem("userRefreshToken");
         localStorage.removeItem("userData");
-        window.location.href = "/login";
+
+        //window.location.href = "/sign-wallet";
         return Promise.reject(refreshError);
       }
     }

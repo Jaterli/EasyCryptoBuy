@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { API_PATHS } from "@/config/paths";
-import { ApiCartItem, CartContextType, CartItem, Product, Transaction } from "@/shared/types/types";
+import { ApiCartItem, CartContextType, CartItem, Product } from "@/shared/types/types";
 import { useWallet } from "@/shared/context/useWallet";
 import { authUserAxios } from "../auth/authUserAxios";
+import { axiosAPI } from "../services/api";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -11,30 +12,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { isWalletRegistered } = useWallet();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoading, setCartLoading] = useState<boolean>(true);
-  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
   const [cartError, setCartError] = useState<boolean>(false);
   const { address } = useAccount();
 
   // Verificar transacciones pendientes
   const checkPendingTransactions = async () => {
     if (!address || !isWalletRegistered) {
-      setPendingTransactions([]);
-      return;
+      return [];
     }
     
     try {
-      const { data } = await authUserAxios.get(`${API_PATHS.payments}/check-pending-transactions/${address}`);
+      console.log("Comprobando si hay transacciones pendientes...");
+      const { data } = await axiosAPI.checkPendingTransactions(address);
       
       if (data.success) {
-        setPendingTransactions(data.transactions || []);
+        return data.transactions || [];
       } else {
         console.error("Error checking pending transactions:", data.message);
-        setPendingTransactions([]);
       }
     } catch (err) {
       console.error("Error verificando transacciones pendientes:", err);
-      setPendingTransactions([]);
     }
+    return [];
   };
 
   // Verificar transacciones pendientes al cambiar de cuenta
@@ -49,9 +48,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
     
-    await checkPendingTransactions();
+    const pending = await checkPendingTransactions();
     
-    if (pendingTransactions.length > 0) {
+    if (pending.length > 0) {
       alert(`No puedes modificar el carrito mientras tengas transacciones pendientes. 
              Por favor, completa o cancela las transacciones pendientes primero.`);
       return false;
@@ -59,13 +58,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  // Función para guardar el carrito en el backend
+  // Guardar Carrito
   useEffect(() => {
     if (!address || !isWalletRegistered || cart.length === 0 || cartError) return;
 
-    const saveCart = async () => {
-      if (!await verifyBeforeCartOperation()) return;
-
+     (async function () {
       const payload = {
         wallet: address,
         items: cart.map((item: CartItem) => ({
@@ -75,13 +72,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       try {
-        await authUserAxios.post(`${API_PATHS.payments}/save-cart`, payload);
+        await axiosAPI.saveCart(payload);
       } catch (error) {
         console.error("Error sincronizando carrito:", error);
       }
-    };
+    })();
 
-    saveCart();
   }, [cart, address, cartError]);
 
 
@@ -117,12 +113,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!await verifyBeforeCartOperation()) return;
 
     try {
-      await authUserAxios.delete(`${API_PATHS.payments}/clear-cart/${address}`);
+      await axiosAPI.clearCart(address);
       setCart([]);
     } catch (err) {
       console.error("Error limpiando carrito en backend:", err);
     }
   };
+
+  const deleteCart = async () => {
+    if (!address || cartError) return;
+    try {
+      await axiosAPI.deleteCart(address);
+      setCart([]);
+    } catch (err){
+      console.error("Error limpiando carrito en backend:", err);
+    }
+  }
 
   // Función para cargar el carrito desde el backend
   useEffect(() => {
@@ -171,11 +177,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addToCart,
         removeFromCart,
         clearCart,
+        deleteCart,
         setCart,
         cartLoading,
         setCartLoading,
-        pendingTransactions,
-        checkPendingTransactions,
         cartError
       }}
     >

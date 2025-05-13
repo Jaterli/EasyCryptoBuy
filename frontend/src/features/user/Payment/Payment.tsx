@@ -9,8 +9,8 @@ import { useWallet } from "@/shared/context/useWallet";
 import { useNavigate } from "react-router-dom";
 import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
-import { Transaction } from "@/shared/types/types";
-import { paymentsAPI } from "../services/api";
+import { ApiError, Transaction } from "@/shared/types/types";
+import { axiosAPI } from "../services/api";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -35,10 +35,11 @@ export interface PendingTransaction {
 
 export function Payment() {
   const { address, isAuthenticated, isWalletRegistered, isLoading: isAuthLoading } = useWallet();
-  const { cart, cartLoading, clearCart } = useCart();
+  const { cart, cartLoading, deleteCart } = useCart();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
+  const [checkPendingTx, setChekPendingTx] = useState<boolean>(false);
   const [transactionData, setTransaction] = useState<Transaction | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
@@ -55,11 +56,12 @@ export function Payment() {
     toaster.create({ title, description: message, type, duration: type === 'error' ? 5000 : 3000 });
   }, []);
 
+
   useEffect(() => {
     if (writeError || writeApproveError) {
       const cleanupFailedTransaction = async () => {
         if (transaction_id) {
-          await paymentsAPI.deleteTransaction(transaction_id);
+          await axiosAPI.deleteTransaction(transaction_id);
           setTransactionId(null);
         }
         setPendingTx(null);
@@ -67,7 +69,7 @@ export function Payment() {
       cleanupFailedTransaction();
       showToast('error', "Error en transacción", (writeError ? writeError.message : writeApproveError ? writeApproveError.message : 'Error desconocido'));
     }
-  }, [writeError, writeApproveError, showToast, transaction_id]);
+  }, [writeError, writeApproveError, showToast]);
 
   // 1. Validación del carrito
   useEffect(() => {
@@ -75,7 +77,7 @@ export function Payment() {
       const validateCart = async () => {
         setCheckingStock(true);
         try {
-          const response = await paymentsAPI.validateCart(
+          const response = await axiosAPI.validateCart(
             cart.map(item => ({ id: item.product.id, quantity: item.quantity }))
           );
           setStockIssues(response.data.invalid || []);
@@ -89,6 +91,27 @@ export function Payment() {
     }
   }, [cart]);
 
+  // Chequeamos si hay transacciones anteriores que no se marcaron como confirmed
+  useEffect(() => {
+    if (address){
+      const checkForPendingTx = async  () => {
+        try {
+          console.log("Comprobando si hay transacciones pendientes...");
+          const { data } = await axiosAPI.checkPendingTransactions(address);       
+          if (data.success) {
+            setChekPendingTx(data.has_pending);
+            return;
+          } else {
+            console.error("Error checking pending transactions:", data.message);
+          }
+        } catch (err) {
+          console.error("Error verificando transacciones pendientes:", err);
+        }
+      };
+      checkForPendingTx();
+    }
+  },[address]);
+
   // 2. Actualización y obtención de detalles de transacción
   useEffect(() => {
     if (isConfirmed && pendingTx && transaction_id) {
@@ -96,7 +119,7 @@ export function Payment() {
       const updateAndFetchTransaction = async () => {
         try {
           // Actualizar la transacción
-          const updateResponse = await paymentsAPI.updateTransaction(
+          const updateResponse = await axiosAPI.updateTransaction(
             transaction_id,
             {
               wallet_address: address,
@@ -112,10 +135,10 @@ export function Payment() {
           }
   
           // Obtener detalles
-          const detailsResponse = await paymentsAPI.getTransactionDetails(hash);
+          const detailsResponse = await axiosAPI.getTransactionDetails(hash);
           
           if (detailsResponse.data.success && detailsResponse.data.transaction) {
-            clearCart();
+            deleteCart();
             setTransaction(detailsResponse.data.transaction);
             setPaymentCompleted(true);
             showToast('success', "Enhorabuena!", updateResponse.data.message);
@@ -141,7 +164,7 @@ export function Payment() {
     if (paymentCompleted && transactionData && transactionData.status === 'pending' && hash) {
       const fetchTransactionDetails = async () => {
         try {
-          const response = await paymentsAPI.getTransactionDetails(hash);
+          const response = await axiosAPI.getTransactionDetails(hash);
           
           if (response.data.success) {
             setTransaction(response.data.transaction);
@@ -194,7 +217,7 @@ export function Payment() {
       showToast('error', "Error", "Por favor, conecta tu wallet primero.");
       return;
     }
-      
+         
     const decimalCount = amount.split('.')[1]?.length || 0;
     if (decimalCount > TOKEN_DECIMALS[token]) {
       showToast('error', "Error", `Máximo ${TOKEN_DECIMALS[token]} decimales permitidos`);
@@ -204,7 +227,7 @@ export function Payment() {
     try {
       // Registrar transacción pendiente sin hash
       setProgressMessage("Registrando transacción en el sistema...");
-      const registerResponse = await paymentsAPI.registerTransaction({
+      const registerResponse = await axiosAPI.registerTransaction({
         wallet_address: address,
         amount,
         token
@@ -234,15 +257,16 @@ export function Payment() {
         });
       }
   
-    } catch (error) {  
-      setProgressMessage("");      
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    } catch (error: unknown) {  
+      setProgressMessage("");
+      const apiError = error as ApiError;
+      const errorMessage = apiError.response.data.message;
+      
       showToast('error', "Error en transacción", errorMessage);
       console.error("Error en transacción:", errorMessage);
       setPendingTx(null);
     }
   };
-
   const isLoadingState = isTransactionPending || isConfirming || isApproving || isAuthLoading;
   const totalUSD = cart.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
 
@@ -262,6 +286,31 @@ export function Payment() {
             mt={4}
           >
             Volver a la tienda
+          </Button>
+        </VStack>
+      </Box>
+    );
+  }
+
+
+
+
+
+
+  if (checkPendingTx){
+    return (
+      <Box p={5} mt={5} mb={5}>
+        <VStack spaceY={8} align="center">
+          <Text alignContent={"center"} color="red.500" fontSize="lg">
+            Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain.
+            Hasta que no se confirmen o se eliminen, no podrás hacer otra compra.
+          </Text>
+          <Button 
+            colorPalette="blue" 
+            onClick={() => navigate("/payments-history")}
+            mt={4}
+          >
+            Historial de Compras
           </Button>
         </VStack>
       </Box>

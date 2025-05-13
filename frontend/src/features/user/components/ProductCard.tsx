@@ -20,7 +20,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <Card.Root variant="elevated" width="100%" overflow="hidden">
       <Image
-        src={`https://picsum.photos/seed/${product.name}/300`} // Mientras no exista image en el modelo product
+        src={`https://picsum.photos/seed/${product.id}/300`} // Mientras no exista image en el modelo product
         alt={product.name}
         height="200px"
         objectFit="cover"
