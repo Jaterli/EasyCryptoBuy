@@ -7,8 +7,8 @@ export interface LoginResponse {
   username: string;
 }
 
-export async function adminLogin(username: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_PATHS.accounts}/admin-login/`, {
+export async function companyLogin(username: string, password: string): Promise<LoginResponse> {
+  const res = await fetch(`${API_PATHS.accounts}/company-login/`, {
     method: "POST",      
     headers: {
       "Content-Type": "application/json",

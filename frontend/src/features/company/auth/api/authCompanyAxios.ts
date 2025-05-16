@@ -8,29 +8,30 @@ declare module 'axios' {
   }
 }
 
-const api: AxiosInstance = axios.create({
+const companyApi: AxiosInstance = axios.create({
   baseURL: API_PATHS.base,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-async function refreshAccessToken(): Promise<string> {
-  const refresh = localStorage.getItem("adminRefreshToken");
+async function refreshCompanyToken(): Promise<string> {
+  const refresh = localStorage.getItem("companyRefreshToken");
 
   try {
-    const { data } = await api.post("/api/token/refresh/", { refresh });
-    localStorage.setItem("adminToken", data.access);
+    console.log("Intentando refrescar token");
+    const { data } = await companyApi.post("/api/token/refresh/", { refresh });
+    localStorage.setItem("companyToken", data.access);
     return data.access;
   } catch (error) {
-    throw new Error("No se pudo refrescar el token. "+error);
+    throw new Error("No se pudo refrescar el token de company. "+error);
   }
 }
 
 // Interceptor para añadir token - ahora usando InternalAxiosRequestConfig
-api.interceptors.request.use(
+companyApi.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("companyToken");
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -41,7 +42,7 @@ api.interceptors.request.use(
 );
 
 // Interceptor para manejar errores 401
-api.interceptors.response.use(
+companyApi.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
@@ -50,16 +51,16 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const newToken = await refreshAccessToken();
+        const newToken = await refreshCompanyToken();
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
+        return companyApi(originalRequest);
       } catch (refreshError) {
         console.error("Refresh fallido o sesión caducada, cerrando sesión", refreshError);
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminRefreshToken");
-        localStorage.removeItem("adminUsername");
-        window.location.href = "./admin-login";
+        localStorage.removeItem("companyToken");
+        localStorage.removeItem("companyRefreshToken");
+        localStorage.removeItem("companyUsername");
+        window.location.href = "./company-login";
         return Promise.reject(refreshError);
       }
     }
@@ -68,4 +69,4 @@ api.interceptors.response.use(
   }
 );
 
-export const authAxios = api;
+export const authCompanyAxios = companyApi;

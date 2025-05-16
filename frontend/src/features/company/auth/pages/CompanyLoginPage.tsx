@@ -2,16 +2,16 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Field, Fieldset, Input, Stack, Box } from "@chakra-ui/react";
 import { useForm } from "react-hook-form";
-import { adminLogin } from "../api/login";
+import { companyLogin } from "../api/login";
 import { toaster } from "@/shared/components/ui/toaster";
-import { useAdminAuth } from "@/shared/context/AdminAuthContext";
+import { useCompanyAuth } from "@/shared/context/CompanyAuthContext";
 
 interface LoginFormValues {
   username: string;
   password: string;
 }
 
-const AdminLoginPage: React.FC = () => {
+const CompanyLoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
@@ -19,11 +19,11 @@ const AdminLoginPage: React.FC = () => {
   } = useForm<LoginFormValues>();
   
   const navigate = useNavigate();
-  const { login } = useAdminAuth();
+  const { login } = useCompanyAuth();
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const { token, refresh, is_staff, username } = await adminLogin(data.username, data.password);
+      const { token, refresh, is_staff, username } = await companyLogin(data.username, data.password);
       
       if (is_staff) {
         login(token, refresh, username);
@@ -107,4 +107,4 @@ const AdminLoginPage: React.FC = () => {
   );
 };
 
-export default AdminLoginPage;
+export default CompanyLoginPage;

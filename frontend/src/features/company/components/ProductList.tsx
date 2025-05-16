@@ -15,10 +15,10 @@ import {
   Select,
   createListCollection,
 } from "@chakra-ui/react";
-import * as api from "../api/products";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
 import { Product } from "@/shared/types/types";
+import { authCompanyAPI } from "../services/companyApi";
 
 const itemsPerPageOptions = createListCollection({
   items: [
@@ -42,7 +42,7 @@ export const ProductList: React.FC = () => {
   const totalPages = Math.ceil(products.length / itemsPerPage);
 
   const loadProducts = async () => {
-    const data = await api.fetchProducts();
+    const data = await authCompanyAPI.getProducts();
     setProducts(data);
     setSelectedProducts([]);
     if (currentPage > Math.ceil(data.length / itemsPerPage)) {
@@ -52,21 +52,21 @@ export const ProductList: React.FC = () => {
 
   const handleSave = async (product: Product) => {
     if (product.id) {
-      await api.updateProduct(product.id, product);
+      await authCompanyAPI.updateProduct(product.id, product);
     } else {
-      await api.createProduct(product);
+      await authCompanyAPI.createProduct(product);
     }
     onClose();
     loadProducts();
   };
 
   const handleDelete = async (id: string) => {
-    await api.deleteProduct(id);
+    await authCompanyAPI.deleteProduct(id);
     loadProducts();
   };
 
   const handleDeleteSelected = async () => {
-    await Promise.all(selectedProducts.map(id => api.deleteProduct(id)));
+    await Promise.all(selectedProducts.map(id => authCompanyAPI.deleteProduct(id)));
     loadProducts();
   };
 
@@ -197,7 +197,7 @@ export const ProductList: React.FC = () => {
                     </Table.Cell>
                     <Table.Cell textAlign="end">
                       <Text fontSize={{ base: "sm", md: "md" }}>
-                        {product.amount_usd.toLocaleString('en-US', {
+                        ${product.amount_usd.toLocaleString('en-US', {
                           style: 'currency',
                           currency: 'USD'
                         })}

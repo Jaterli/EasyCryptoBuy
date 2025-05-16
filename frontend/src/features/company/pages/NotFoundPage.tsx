@@ -19,7 +19,7 @@ const NotFoundPage = () => {
         <Button
           colorPalette="blue"
           size="lg"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/company/')}
           mt={4}
         >
           Volver al inicio

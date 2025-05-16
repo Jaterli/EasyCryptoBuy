@@ -1,16 +1,13 @@
 from decimal import Decimal, InvalidOperation
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
 from .utils.formatters import format_scientific_to_decimal
-from .models import Transaction, Cart, CartItem
+from .models import Transaction, Cart
 from reportlab.lib.pagesizes import letter
 from django.shortcuts import get_object_or_404, get_list_or_404
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.conf import settings
-from django.views.decorators.http import require_GET
 from web3 import Web3
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -23,24 +20,24 @@ from users.decorators import wallet_required
 from eth_account.messages import encode_defunct
 from eth_account import Account
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def verify_signature(request):
-    try:
-        data = request.data
-        address = data['address']
-        message = data['message']
-        signature = data['signature']
+# @api_view(["POST"])
+# @permission_classes([AllowAny])
+# def verify_signature(request):
+#     try:
+#         data = request.data
+#         address = data['address']
+#         message = data['message']
+#         signature = data['signature']
 
-        encoded_message = encode_defunct(text=message)
-        recovered_address = Account.recover_message(encoded_message, signature=signature)
+#         encoded_message = encode_defunct(text=message)
+#         recovered_address = Account.recover_message(encoded_message, signature=signature)
 
-        if recovered_address.lower() == address.lower():
-            return Response({'success': True, 'message': 'Firma verificada correctamente.'})
-        else:
-            return Response({'success': False, 'message': 'La firma no es válida.'}, status=400)
-    except Exception as e:
-        return Response({'success': False, 'message': str(e)}, status=500)
+#         if recovered_address.lower() == address.lower():
+#             return Response({'success': True, 'message': 'Firma verificada correctamente.'})
+#         else:
+#             return Response({'success': False, 'message': 'La firma no es válida.'}, status=400)
+#     except Exception as e:
+#         return Response({'success': False, 'message': str(e)}, status=500)
 
 
 @api_view(["POST"])
@@ -305,43 +302,43 @@ def get_transaction_details(request, tx_hash):
         }, status=status.HTTP_404_NOT_FOUND)
     
 
-@permission_classes([AllowAny])
-@require_GET
-def transaction_details(request):
-    """
-    Endpoint para obtener todos los datos de una transacción registrada.
-    Se requiere el parámetro GET 'txHash'.
-    """
-    tx_hash = request.GET.get("txHash")
-    if not tx_hash:
-        return JsonResponse({
-            "success": False,
-            "message": "El parámetro 'txHash' es obligatorio."
-        }, status=400)
+# @permission_classes([AllowAny])
+# @require_GET
+# def transaction_details(request):
+#     """
+#     Endpoint para obtener todos los datos de una transacción registrada.
+#     Se requiere el parámetro GET 'txHash'.
+#     """
+#     tx_hash = request.GET.get("txHash")
+#     if not tx_hash:
+#         return JsonResponse({
+#             "success": False,
+#             "message": "El parámetro 'txHash' es obligatorio."
+#         }, status=400)
     
-    try:
-        transaction = Transaction.objects.get(transaction_hash=tx_hash)
-    except Transaction.DoesNotExist:
-        return JsonResponse({
-            "success": False,
-            "message": "Transacción no encontrada."
-        }, status=404)
+#     try:
+#         transaction = Transaction.objects.get(transaction_hash=tx_hash)
+#     except Transaction.DoesNotExist:
+#         return JsonResponse({
+#             "success": False,
+#             "message": "Transacción no encontrada."
+#         }, status=404)
     
-    # Se arman los datos a retornar.
-    data = {
-        "wallet_address": transaction.wallet_address,
-        "amount": transaction.amount,
-        "token": transaction.token,
-        "transaction_hash": transaction.transaction_hash,
-        "status": transaction.status,
-        "created_at": transaction.created_at.isoformat() if hasattr(transaction, 'created_at') else None,
-        "updated_at": transaction.updated_at.isoformat() if hasattr(transaction, 'updated_at') else None,
-    }
+#     # Se arman los datos a retornar.
+#     data = {
+#         "wallet_address": transaction.wallet_address,
+#         "amount": transaction.amount,
+#         "token": transaction.token,
+#         "transaction_hash": transaction.transaction_hash,
+#         "status": transaction.status,
+#         "created_at": transaction.created_at.isoformat() if hasattr(transaction, 'created_at') else None,
+#         "updated_at": transaction.updated_at.isoformat() if hasattr(transaction, 'updated_at') else None,
+#     }
     
-    return JsonResponse({
-        "success": True,
-        "transaction": data
-    })
+#     return JsonResponse({
+#         "success": True,
+#         "transaction": data
+#     })
 
 
 

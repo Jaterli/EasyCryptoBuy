@@ -48,6 +48,13 @@ class Transaction(models.Model):
 
 class Cart(models.Model):
     user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='cart')
+    transaction = models.OneToOneField(
+        'Transaction', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='cart'
+    )    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -62,10 +69,34 @@ class Cart(models.Model):
         self.clear()  # Primero borra los items
         super().delete()  # Luego borra el carrito
 
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
+    price_at_sale = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         unique_together = ('cart', 'product')    
+
+
+class OrderItem(models.Model):
+    transaction = models.ForeignKey(
+        Transaction, 
+        on_delete=models.CASCADE,
+        related_name='order_items'
+    )
+    product = models.ForeignKey(
+        'company.Product', 
+        on_delete=models.PROTECT
+    )
+    quantity = models.PositiveIntegerField()
+    price_at_sale = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2
+    )  # Guardar el precio en el momento de la venta
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def subtotal(self):
+        return self.price_at_sale * self.quantity        

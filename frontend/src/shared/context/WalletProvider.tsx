@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { toaster } from "@/shared/components/ui/toaster";
-import { authAPI } from "@/features/user/services/api";
+import { authUserAPI } from "@/features/user/services/userApi";
 import { ApiError } from "../types/types";
 
 interface AuthState {
@@ -54,7 +54,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!address) return;
     setIsLoading(true);
     try {
-      const response = await authAPI.checkWallet(address);
+      const response = await authUserAPI.checkWallet(address);
       setIsWalletRegistered(response.data.isRegistered);
     } catch (error) {
       console.error("Error: "+error);
@@ -72,7 +72,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       // Verificar token con el backend
       console.log("Verificando token con el backend...")
-      const response = await authAPI.verifyToken(storedToken);
+      const response = await authUserAPI.verifyToken(storedToken);
       
       if (response.data.isValid && response.data.wallet.toLowerCase() === address.toLowerCase()) {
         console.log("Token validado.")
@@ -96,7 +96,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     
     try {
       // 1. Obtener nonce del backend
-      const nonceResponse = await authAPI.getNonce(address);
+      const nonceResponse = await authUserAPI.getNonce(address);
       const nonce = nonceResponse.data.nonce;
 
       // 2. Crear mensaje estructurado
@@ -112,7 +112,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const signature = await signMessageAsync({ message: authMessage });
 
       // 4. Autenticar con el backend
-      const authResponse = await authAPI.authenticate({
+      const authResponse = await authUserAPI.authenticate({
         wallet_address: address,
         signature,
         message: authMessage // Enviamos el JSON completo
