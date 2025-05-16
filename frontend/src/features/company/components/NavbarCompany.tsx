@@ -20,18 +20,18 @@ import {
 } from "@chakra-ui/react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { ColorModeButton } from "@/shared/components/ui/color-mode";
-import { useAdminAuth } from "@/shared/context/AdminAuthContext";
+import { useCompanyAuth } from "@/shared/context/CompanyAuthContext";
 import { FaBars } from "react-icons/fa";
 
 export function NavbarCompany() {
-    const { logout, username } = useAdminAuth();
+    const { logout, username } = useCompanyAuth();
     const navigate = useNavigate();
     const isMobile = useBreakpointValue({ base: true, md: false });
     const { open, onOpen, onClose } = useDisclosure();
 
     const handleLogout = () => {
         logout();
-        navigate("/admin-login");
+        navigate("/company-login");
     };
 
     const NavButton = ({ to, children }: { to: string; children: React.ReactNode }) => (
@@ -109,7 +109,7 @@ export function NavbarCompany() {
         >
             <Flex align="center">
                 <Box fontSize="xl" fontWeight="bold">
-                    <NavLink to={username ? "/company/products" : "/"}>
+                    <NavLink to={username ? "/company/" : "/"}>
                         EasyCryptoBuy Admin
                     </NavLink>
                 </Box>

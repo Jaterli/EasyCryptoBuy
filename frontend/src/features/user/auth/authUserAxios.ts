@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { API_PATHS } from "@/config/paths";
 
+// Extendemos la interfaz para añadir _retry
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
@@ -59,7 +60,6 @@ userApi.interceptors.response.use(
         localStorage.removeItem("userToken");
         localStorage.removeItem("userRefreshToken");
         localStorage.removeItem("userData");
-
         //window.location.href = "/sign-wallet";
         return Promise.reject(refreshError);
       }

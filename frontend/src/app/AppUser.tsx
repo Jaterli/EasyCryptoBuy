@@ -7,11 +7,10 @@ import RegisterWalletPage from "@/features/user/pages/RegisterWalletPage";
 import Footer from "@/shared/components/Footer";
 import { Payment } from "@/features/user/Payment/Payment";
 import { PaymentHistory } from "@/features/user/components/PaymentHistory";
-import ResettableComponent from "@/shared/components/_ResettableComponent";
+// import ResettableComponent from "@/shared/components/_ResettableComponent";
 import Home from "@/features/user/pages/Dashboard";
 import SignWalletPage from "@/features/user/pages/SignWalletPage";
 import RequireWallet from "@/shared/guards/RequireWallet";
-import RequireSignature from "@/shared/guards/RequireSignature";
 import RequireRegistration from "@/shared/guards/RequireRegistration";
 import NotFoundPage from "@/features/user/pages/NotFoundPage";
 import { ProductCatalogPage } from "@/features/user/pages/ProductCatalogPage";
@@ -32,11 +31,9 @@ export const AppUser = () => {
               <Route path="/cart-sumary" element={<CartSummaryPage />} />
               <Route path="/payments-history" element={<RequireWallet><RequireRegistration><PaymentHistory /></RequireRegistration></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><RequireRegistration>
-                {/* <RequireSignature> */}
                   {/* <ResettableComponent> */}
                     <Payment />
                     {/* </ResettableComponent> */}
-                {/* </RequireSignature> */}
                 </RequireRegistration></RequireWallet>} />
               <Route path="/register-wallet" element={<RequireWallet><RegisterWalletPage /></RequireWallet>} />
               <Route path="/sign-wallet" element={<RequireWallet><SignWalletPage /></RequireWallet>} />

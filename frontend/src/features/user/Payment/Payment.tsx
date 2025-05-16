@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { ApiError, Transaction } from "@/shared/types/types";
-import { axiosAPI } from "../services/api";
+import { axiosAPI } from "../services/userApi";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -138,7 +138,7 @@ export function Payment() {
           const detailsResponse = await axiosAPI.getTransactionDetails(hash);
           
           if (detailsResponse.data.success && detailsResponse.data.transaction) {
-            deleteCart();
+            // deleteCart();
             setTransaction(detailsResponse.data.transaction);
             setPaymentCompleted(true);
             showToast('success', "Enhorabuena!", updateResponse.data.message);
@@ -291,11 +291,6 @@ export function Payment() {
       </Box>
     );
   }
-
-
-
-
-
 
   if (checkPendingTx){
     return (

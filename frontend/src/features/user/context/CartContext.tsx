@@ -4,7 +4,7 @@ import { API_PATHS } from "@/config/paths";
 import { ApiCartItem, CartContextType, CartItem, Product } from "@/shared/types/types";
 import { useWallet } from "@/shared/context/useWallet";
 import { authUserAxios } from "../auth/authUserAxios";
-import { axiosAPI } from "../services/api";
+import { axiosAPI } from "../services/userApi";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 

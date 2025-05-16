@@ -2,7 +2,7 @@ import { API_PATHS } from '@/config/paths';
 import axios from 'axios';
 import { authUserAxios } from '../auth/authUserAxios';
 
-export const authAPI = {
+export const authUserAPI = {
   getNonce: (wallet: string) => 
     axios.get(`${API_PATHS.users}/get-wallet-nonce/${wallet}`),
 
@@ -20,10 +20,10 @@ export const authAPI = {
 
 export const axiosAPI = {
 
-  registerTransaction: (data: any) => 
+  registerTransaction: (data: unknown) => 
     authUserAxios.post(`${API_PATHS.payments}/register-transaction`, data),
   
-  updateTransaction: (id: number, data: any) => 
+  updateTransaction: (id: number, data: unknown) => 
     authUserAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, data),
   
   getTransactionDetails: (hash: `0x${string}` | undefined) => 
@@ -32,10 +32,10 @@ export const axiosAPI = {
   deleteTransaction: (id: number) => 
     authUserAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),
 
-  validateCart: (data: any) => 
+  validateCart: (data: unknown) => 
     axios.post(`${API_PATHS.company}/validate-cart`, data),
 
-  saveCart: (data: any) => 
+  saveCart: (data: unknown) => 
     authUserAxios.post(`${API_PATHS.payments}/save-cart`, data),
 
   clearCart: (address: string) =>
