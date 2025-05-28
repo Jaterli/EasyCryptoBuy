@@ -19,7 +19,7 @@ export const CartSummaryPage = () => {
       <Heading size="xl" mb={4}>Resumen del Carrito</Heading>
 
       {cart.length === 0 ? (
-        <Text>No has agregado productos aún.</Text>
+        <Text>El carrito está vacío.</Text>
       ) : (
         <>
           <Table.Root variant="outline" size="md">

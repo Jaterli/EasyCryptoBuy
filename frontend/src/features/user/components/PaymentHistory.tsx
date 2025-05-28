@@ -9,12 +9,12 @@ import {
   createListCollection,
   Stack,
 } from '@chakra-ui/react';
-import { useAccount } from 'wagmi';
 import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
 import TransactionData from "../components/TransactionData";
-import { API_PATHS } from '@/config/paths';
-import axios from 'axios';
+import { authUserAPI } from '../services/userApi';
+import { useWallet } from '@/shared/context/useWallet';
+import { useAuthDialog } from '../context/AuthDialogContext';
 
 
 const itemsPerPageOptions = createListCollection({
@@ -26,17 +26,31 @@ const itemsPerPageOptions = createListCollection({
 });
 
 export function PaymentHistory() {
-  const { address } = useAccount();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+  const { address, isAuthenticated, setIsAuthenticated } = useWallet();
+  const { requireAuth } = useAuthDialog();
+   
   useEffect(() => {
     if (address) {
-      setIsLoading(true);
 
-      axios.get(`${API_PATHS.payments}/get-user-transactions/${address}`)
+      if (!isAuthenticated) {
+        const autoAuth = async () => {    
+          const success = await requireAuth();
+          if (!success) {
+            console.warn("El usuario canceló la autenticación.");
+            // Opcional: redireccionar a login o mostrar advertencia
+          }else{
+            setIsAuthenticated(true);
+          }                  
+        };
+        autoAuth();
+      }
+
+      setIsLoading(true);
+      authUserAPI.getUserTransactions(address)
       .then(response => {
         setTransactions(response.data.transactions);
         setCurrentPage(1);
@@ -48,7 +62,8 @@ export function PaymentHistory() {
         setIsLoading(false);
       });
     }
-  }, [address]);
+  }, [address, isAuthenticated, requireAuth, setIsAuthenticated]);
+
 
   // Calcular transacciones para la página actual
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -68,7 +83,9 @@ export function PaymentHistory() {
         Historial de Pagos de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}
       </Flex>
       
-      {isLoading ? (
+      {!isAuthenticated ? (
+        <Text>Necesitas autenticarte para ver las transacciones.</Text>
+      ) : isLoading ? (
         <Text>Cargando transacciones...</Text>
       ) : transactions.length === 0 ? (
         <Text>No se encontraron transacciones.</Text>

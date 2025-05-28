@@ -125,11 +125,11 @@ def verify_token(request):
     token = request.META.get('HTTP_AUTHORIZATION', '').split('Bearer ')[-1]
     
     if not token:
+        logger.error(f"Token no proporcionado.")
         return Response(
             {'valid': False, 'error': 'Token no proporcionado'},
             status=status.HTTP_400_BAD_REQUEST
         )
-
     try:
         # Validar el token
         auth = JWTAuthentication()
@@ -147,6 +147,7 @@ def verify_token(request):
         })
         
     except (InvalidToken, TokenError) as e:
+        logger.error(f"Token NO válido.")
         return Response(
             {'valid': False, 'error': str(e)},
             status=status.HTTP_401_UNAUTHORIZED

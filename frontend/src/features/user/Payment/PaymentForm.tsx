@@ -27,7 +27,6 @@ interface PaymentFormProps {
   amount: string;
   setAmount: (amount: string) => void;
   isWalletRegistered: boolean | null;
-  isAuthenticated : boolean,
 }
 
 const TOKEN_OPTIONS = [
@@ -45,12 +44,11 @@ export function PaymentForm({
   amount, 
   setAmount,
   isWalletRegistered,
-  isAuthenticated,
 }: PaymentFormProps) {
   const { prices: tokenPrices, loading: isTokenLoading } = useTokenPrices();
   const { cart } = useCart();
-  const { authenticate } = useWallet();  
-  const { open: isAuthDialogOpen, onOpen: openAuthDialog, onClose: closeAuthDialog } = useDisclosure();  
+  const { authenticate, isAuthenticated } = useWallet();  
+  const { onClose: closeAuthDialog } = useDisclosure();  
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [totalUSD, setTotalUSD] = useState(0);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -66,7 +64,6 @@ export function PaymentForm({
     const calculatedAmount = (totalUSD / tokenPriceUSD).toFixed(6);
     setAmount(calculatedAmount);
   }, [totalUSD, selectedToken, tokenPrices, setAmount]);
-
 
   const handleAuthAndPayment = async () => {
     try {
@@ -90,14 +87,15 @@ export function PaymentForm({
   const handleAuthConfirm = async () => {
     setIsAuthLoading(true);
     try {
-      console.log("Intentando autenticar...")
       const authSuccess = await authenticate();
       if (authSuccess) {
-        closeAuthDialog();
-        console.log("Usuario autenticado.")
         await onSubmit(amount, selectedToken);
+        closeAuthDialog();        
+      } else {
+        console.warn("Autenticación fallida (authSuccess false)");        
       }
     } catch (error) {
+      console.error("Error en autenticación:", error); // Debug 6
       toaster.create({
         title: "Error de autenticación",
         description: error instanceof Error ? error.message : "No se pudo autenticar",

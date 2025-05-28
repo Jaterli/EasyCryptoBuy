@@ -1,4 +1,3 @@
-// components/company/dashboard/RecentTransactions.tsx
 import { Card, Heading, Table, Badge } from '@chakra-ui/react';
 import { format } from 'date-fns';
 
@@ -34,7 +33,7 @@ export function RecentTransactions({ transactions }: { transactions: Array<{
               <Table.Cell>{tx.wallet_address.slice(0, 6)}...{tx.wallet_address.slice(-4)}</Table.Cell>
               <Table.Cell isNumeric>{tx.amount} {tx.token}</Table.Cell>
               <Table.Cell>
-                <Badge colorScheme={statusColors[tx.status as keyof typeof statusColors]}>
+                <Badge colorPalette={statusColors[tx.status as keyof typeof statusColors]}>
                   {tx.status}
                 </Badge>
               </Table.Cell>

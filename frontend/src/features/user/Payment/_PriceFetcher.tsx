@@ -19,3 +19,9 @@ export function useEthPrice(currency: string = "usd") {
 
   return { price, loading };
 }
+
+
+
+
+
+

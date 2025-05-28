@@ -1,47 +1,60 @@
 import { useCallback } from "react";
 import { toaster } from "@/shared/components/ui/toaster";
-import { API_PATHS } from "@/config/paths";
+import { authUserAPI } from "@/features/user/services/userApi";
+import { useWallet } from "@/shared/context/useWallet";
 
 interface FormData {
   name: string;
   email: string;
 }
 
-export function useRegisterWallet(address: string | undefined) {
+export function useRegisterWallet() {
+  const { address, authenticate } = useWallet();
+
   const registerWallet = useCallback(async (formData: FormData) => {
-    if (!address) return;
+    if (!address) {
+      toaster.create({
+        title: "Error",
+        description: "No hay wallet conectada",
+        type: "error",
+        duration: 3000,
+      });
+      return { success: false };
+    }
 
     try {
-      const response = await fetch(`${API_PATHS.users}/register-wallet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet_address: address,
-          name: formData.name,
-          email: formData.email,
-        }),
+      const response = await authUserAPI.registerWallet({
+        wallet_address: address,
+        name: formData.name,
+        email: formData.email,
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
+        // Autenticar automáticamente después del registro
+        const authResult = await authenticate();
+        
         toaster.create({
-          title: "Wallet registrada",
-          description: data.message,
+          title: "Registro exitoso",
+          description: "Tu wallet ha sido registrada correctamente",
           type: "success",
           duration: 3000,
         });
-        return { success: true };
+        
+        return { 
+          success: true,
+          authenticated: authResult 
+        };
       } else {
         toaster.create({
           title: "Registro fallido",
-          description: data.message,
+          description: response.data.message || "Error desconocido",
           type: "error",
           duration: 4000,
         });
         return { success: false };
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido";
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message || "Error desconocido";
       toaster.create({
         title: "Error en registro",
         description: message,
@@ -50,7 +63,7 @@ export function useRegisterWallet(address: string | undefined) {
       });
       return { success: false };
     }
-  }, [address]);
+  }, [address, authenticate]);
 
   return { registerWallet };
 }

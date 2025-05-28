@@ -1,7 +1,7 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from "axios";
-import { API_PATHS } from "@/config/paths";
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { API_PATHS } from '@/config/paths';
 
-// Extendemos la interfaz para añadir _retry
+// Extendemos la interfaz para añadir propiedad _retry
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
@@ -11,28 +11,42 @@ declare module 'axios' {
 const userApi: AxiosInstance = axios.create({
   baseURL: API_PATHS.base,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
+  // withCredentials: true, // Para manejar cookies HttpOnly en producción
 });
 
-async function refreshUserToken(): Promise<string> {
-  const refresh = localStorage.getItem("userRefreshToken");
-
+/**
+ * Intenta refrescar el token de acceso usando el refresh token
+ */
+async function refreshUserToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('userRefreshToken');
+  if (!refreshToken){
+    console.error('No se ha encontrado el token de refresco.');
+    return null;
+  }
   try {
-    console.log("Intentando refrescar token");
-    const { data } = await userApi.post("/api/token/refresh/", { refresh });
-    localStorage.setItem("userToken", data.access);
-    return data.access;
+    const response = await userApi.post(`${API_PATHS.users}/token/refresh/`, {
+      refresh: refreshToken
+    });
+    
+    const newAccessToken = response.data.access;
+    localStorage.setItem('userToken', newAccessToken);
+    return newAccessToken;
   } catch (error) {
-    throw new Error("No se pudo refrescar el token de usuario. "+error);
+    console.error('Error refreshing token:', error);
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRefreshToken');
+    window.location.reload();
+    return null;
   }
 }
 
-// Interceptor para añadir token de usuario
+// Interceptor para añadir token a las peticiones
 userApi.interceptors.request.use(
-  (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = localStorage.getItem("userToken");
-    if (token) {
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('userToken');
+    if (token && !config.headers?.Authorization) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,30 +55,32 @@ userApi.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores 401
+// Interceptor para manejar errores de autenticación
 userApi.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
     
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    // Si es error 401 y no es una petición de refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         const newToken = await refreshUserToken();
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return userApi(originalRequest);
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return userApi(originalRequest);
+        }
       } catch (refreshError) {
-        console.error("Refresh fallido o sesión caducada, cerrando sesión", refreshError);
-        localStorage.removeItem("userToken");
-        localStorage.removeItem("userRefreshToken");
-        localStorage.removeItem("userData");
-        //window.location.href = "/sign-wallet";
-        return Promise.reject(refreshError);
+        console.error('Refresh token failed:', refreshError);
       }
-    }
-    
+      
+      // Si llegamos aquí, el refresh falló - redirigir a login
+      // if (typeof window !== 'undefined') {
+      //   window.location.href = '/login';
+      // }
+    }   
+
     return Promise.reject(error);
   }
 );
