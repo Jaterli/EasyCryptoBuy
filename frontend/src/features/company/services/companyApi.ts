@@ -60,7 +60,7 @@ export const axiosAPI = {
     authCompanyAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, data),
   
   getTransactionDetails: (hash: `0x${string}` | undefined) => 
-    axios.get(`${API_PATHS.payments}/transaction-details/${hash}`),
+    axios.get(`${API_PATHS.payments}/get-transaction-by-hash/${hash}`),
   
   deleteTransaction: (id: number) => 
     authCompanyAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),
@@ -87,7 +87,7 @@ axios.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       // Manejar token expirado aquí
-      console.log('Token expirado o inválido');
+      console.log('Token expirado o inválido [Company]');
       console.log(error.message);
     }
     return Promise.reject(error);

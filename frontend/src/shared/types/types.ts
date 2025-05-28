@@ -3,7 +3,6 @@ export interface CartContextType {
   addToCart: (product: Product) => Promise<void>;
   removeFromCart: (id: string) => Promise<void>;
   clearCart: () => Promise<void>;
-  deleteCart: () => Promise<void>;  
   setCart: (items: CartItem[]) => void;
   cartLoading: boolean;
   setCartLoading: (loading: boolean) => void;
@@ -36,31 +35,25 @@ export interface Transaction {
     id: number;
     transaction_hash: string;
     wallet_address: string;    
-    amount: string;
+    amount: number;
     created_at: string;
     token: string;
     status: string;
-    purchase_summary?: {
-      products: Array<{
-        id: string;
-        name: string;
-        description: string;
-        price_usd: string;
-        quantity: number;
-        subtotal: string;
-      }>;
-      total_usd: string;
-      items_count: number;
-    };
-  }
+}
   
+export interface OrderItem {
+  product: Product;
+  quantity: number;
+  price_at_sale: number;
+  created_at: string;
+}  
 
 export interface ApiError extends Error {
-  response: {
+  response?: {
       status: number;
       data: {
         success?: boolean;
         message: string
       };
     };
-  }
+}

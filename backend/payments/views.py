@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
-from django.http import JsonResponse, HttpResponse
+from django.http import Http404, JsonResponse, HttpResponse
 from .utils.formatters import format_scientific_to_decimal
-from .models import Transaction, Cart
+from .models import OrderItem, Transaction, Cart
 from reportlab.lib.pagesizes import letter
 from django.shortcuts import get_object_or_404, get_list_or_404
 from reportlab.lib import colors
@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from users.models import UserProfile
-from .serializers import CartSerializer, TransactionSerializer
+from .serializers import CartSerializer, OrderItemSerializer
 from django.db import transaction
 from users.decorators import wallet_required
 from eth_account.messages import encode_defunct
@@ -56,7 +56,7 @@ def register_transaction(request):
     except (TypeError, InvalidOperation):
         return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
-    transaction_hash = wallet_address
+    transaction_hash = wallet_address  # Esto parece un placeholder, se actualizará después
 
     if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
         return Response({"success": False, "message": "Ya hay una transacción pendiente para esta wallet"}, status=409)
@@ -66,7 +66,7 @@ def register_transaction(request):
     except UserProfile.DoesNotExist:
         return Response({"success": False, "message": "Usuario no encontrado"}, status=404)
 
-    cart = Cart.objects.filter(user=profile).first()
+    cart = Cart.objects.filter(user=profile, is_active=True).first()
 
     tx = Transaction.objects.create(
         wallet_address=wallet_address,
@@ -74,12 +74,12 @@ def register_transaction(request):
         transaction_hash=transaction_hash,
         token=token,
         status='pending',
-        cart=cart
     )
 
     if cart:
-        tx.purchase_summary = tx.generate_purchase_summary()
-        tx.save()
+        # Relacionamos el carrito pero no lo marcamos como inactivo todavía
+        cart.transaction = tx
+        cart.save()
 
     return Response({
         "success": True,
@@ -137,32 +137,23 @@ def update_transaction(request, transaction_id):
     if Transaction.objects.exclude(id=tx.id).filter(transaction_hash=transaction_hash).exists():
         return Response({"success": False, "message": "El hash ya está registrado en otra transacción"}, status=409)
 
-    profile = UserProfile.objects.get(wallet_address=wallet_address)
-    cart = Cart.objects.filter(user=profile).first()
-
+    # Actualizamos los campos básicos de la transacción
     tx.wallet_address = wallet_address
     tx.amount = amount
     tx.transaction_hash = transaction_hash
     tx.token = token
-    tx.status = 'pending'
-    tx.cart = cart
-
-    if cart:
-        tx.purchase_summary = tx.generate_purchase_summary()
-        for item in cart.items.all():
-            product = item.product
-            product.quantity = max(product.quantity - item.quantity, 0)
-            product.save()
-
     tx.save()
 
-    return Response({"success": True, "message": "Transacción actualizada exitosamente", "hash": transaction_hash})
+    return Response({
+        "success": True,
+        "message": "Transacción actualizada exitosamente",
+        "hash": transaction_hash,
+    })
 
 
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
-@wallet_required
 def delete_transaction(request, transaction_id):
     try:
         transaction = Transaction.objects.get(id=transaction_id)
@@ -201,12 +192,9 @@ def check_pending_transactions(request, wallet_address):
             status='pending'
         ).order_by('-created_at')
         
-        serializer = TransactionSerializer(pending_transactions, many=True)
-        
         return Response({
             "success": True,
             "has_pending": pending_transactions.exists(),
-            "transactions": serializer.data
         })
         
     except Exception as e:
@@ -262,7 +250,7 @@ def generate_invoice(request, transaction_id):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_user_transactions(request, wallet_address):
     transactions = get_list_or_404(
         Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
@@ -277,7 +265,6 @@ def get_user_transactions(request, wallet_address):
                 'transaction_hash': transaction.transaction_hash,
                 'created_at' : transaction.created_at,
                 'token': transaction.token,
-                'purchase_summary': transaction.purchase_summary,
             }
             for transaction in transactions
         ]
@@ -286,60 +273,29 @@ def get_user_transactions(request, wallet_address):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
-def get_transaction_details(request, tx_hash):
+@permission_classes([IsAuthenticated])
+def get_transaction_by_hash(request, tx_hash):
     try:
         transaction = Transaction.objects.get(transaction_hash=tx_hash)
-        serializer = TransactionSerializer(transaction)
-        return Response({
-            "success": True,
-            "transaction": serializer.data
-        })
     except Transaction.DoesNotExist:
-        return Response({
-            "success": False,
-            "message": "Transacción no encontrada"
-        }, status=status.HTTP_404_NOT_FOUND)
-    
+        #return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        data = {'success': True, 'message': 'Transaction not found or does not belong to the wallet'}
+        raise Http404("Transaction not found or does not belong to the wallet")
 
-# @permission_classes([AllowAny])
-# @require_GET
-# def transaction_details(request):
-#     """
-#     Endpoint para obtener todos los datos de una transacción registrada.
-#     Se requiere el parámetro GET 'txHash'.
-#     """
-#     tx_hash = request.GET.get("txHash")
-#     if not tx_hash:
-#         return JsonResponse({
-#             "success": False,
-#             "message": "El parámetro 'txHash' es obligatorio."
-#         }, status=400)
-    
-#     try:
-#         transaction = Transaction.objects.get(transaction_hash=tx_hash)
-#     except Transaction.DoesNotExist:
-#         return JsonResponse({
-#             "success": False,
-#             "message": "Transacción no encontrada."
-#         }, status=404)
-    
-#     # Se arman los datos a retornar.
-#     data = {
-#         "wallet_address": transaction.wallet_address,
-#         "amount": transaction.amount,
-#         "token": transaction.token,
-#         "transaction_hash": transaction.transaction_hash,
-#         "status": transaction.status,
-#         "created_at": transaction.created_at.isoformat() if hasattr(transaction, 'created_at') else None,
-#         "updated_at": transaction.updated_at.isoformat() if hasattr(transaction, 'updated_at') else None,
-#     }
-    
-#     return JsonResponse({
-#         "success": True,
-#         "transaction": data
-#     })
-
+    data = {
+        'transaction':   
+            {
+                'id': transaction.id,
+                'wallet_address': transaction.wallet_address,
+                'amount': transaction.amount,
+                'status': transaction.status,
+                'transaction_hash': transaction.transaction_hash,
+                'created_at': transaction.created_at,
+                'token': transaction.token,
+            },
+        'success': True,
+    }
+    return JsonResponse(data)
 
 
 @api_view(["GET"])
@@ -351,7 +307,7 @@ def get_cart(request, wallet_address):
 
     try:
         profile = UserProfile.objects.get(wallet_address=wallet)
-        cart, _ = Cart.objects.get_or_create(user=profile)
+        cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
         serializer = CartSerializer(cart)
         return Response(serializer.data)
     except UserProfile.DoesNotExist:
@@ -367,7 +323,7 @@ def save_cart(request):
 
     try:
         profile = UserProfile.objects.get(wallet_address=wallet)
-        cart, _ = Cart.objects.get_or_create(user=profile)
+        cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
         serializer = CartSerializer(cart, data=request.data, partial=False)
         if serializer.is_valid():
             serializer.save(user=profile)
@@ -403,7 +359,7 @@ def clear_cart(request, wallet_address):
     try:
         with transaction.atomic():
             profile = UserProfile.objects.get(wallet_address=wallet_address)
-            cart = Cart.objects.get(user=profile)
+            cart = Cart.objects.get(user=profile, is_active=True)
             cart.items.all().delete()  # Solo eliminamos los ítems
             return Response({"success": True, "message": "Ítems del carrito eliminados"})
     except UserProfile.DoesNotExist:
@@ -412,3 +368,17 @@ def clear_cart(request, wallet_address):
         return Response({"error": "Carrito no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_transaction_order_items(request, transaction_id):
+    try:
+        transaction = Transaction.objects.get(id=transaction_id)
+    except Transaction.DoesNotExist:
+        return Response({"sussess": False, "message": "Transacción no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+    order_items = OrderItem.objects.filter(transaction=transaction)
+    serializer = OrderItemSerializer(order_items, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

@@ -12,62 +12,41 @@ class Transaction(models.Model):
         ('confirmed', 'Confirmed'),
         ('failed', 'Failed')
     ], default='pending')
-    cart = models.ForeignKey("Cart", on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
-    purchase_summary = models.JSONField(null=True, blank=True)  # Nuevo campo para el resumen
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.wallet_address} - {self.transaction_hash} - {self.amount} - {self.status}"
-
-    def generate_purchase_summary(self):
-        if not self.cart:
-            return None
-        
-        summary = {
-            'products': [],
-            'total_usd': 0,
-            'items_count': 0
-        }
-        
-        for item in self.cart.items.all():
-            product_data = {
-                'id': item.product.id,
-                'name': item.product.name,
-                'description': item.product.description,
-                'price_usd': str(item.product.amount_usd),
-                'quantity': item.quantity,
-                'subtotal': str(item.product.amount_usd * item.quantity)
-            }
-            summary['products'].append(product_data)
-            summary['total_usd'] += float(product_data['subtotal'])
-            summary['items_count'] += item.quantity
-        
-        summary['total_usd'] = str(summary['total_usd'])
-        return summary
         
 
 class Cart(models.Model):
-    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='cart')
-    transaction = models.OneToOneField(
-        'Transaction', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='cart'
-    )    
+    user = models.ForeignKey( 
+        UserProfile, 
+        on_delete=models.CASCADE, 
+        related_name='carts' 
+    )
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    transaction = models.OneToOneField(
+        'Transaction',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cart'
+    )
 
-    def clear(self):
-        """Elimina todos los items del carrito."""
-        self.items.all().delete()  # Gracias a related_name='items'
-        # Opcional: Reiniciar campos adicionales si es necesario
-        self.save()
-        
-    def delete_with_items(self):
-        """Elimina el carrito y todos sus items (eliminación completa)."""
-        self.clear()  # Primero borra los items
-        super().delete()  # Luego borra el carrito
+    def clear_items(self):
+        self.items.all().delete()
+
+    class Meta:
+        # Constraints para asegurar que solo un carrito activo por usuario
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'], 
+                condition=models.Q(is_active=True),
+                name='unique_active_cart_per_user'
+            )
+        ]
 
 
 class CartItem(models.Model):
@@ -82,7 +61,7 @@ class CartItem(models.Model):
 
 class OrderItem(models.Model):
     transaction = models.ForeignKey(
-        Transaction, 
+        'Transaction', 
         on_delete=models.CASCADE,
         related_name='order_items'
     )
@@ -91,12 +70,9 @@ class OrderItem(models.Model):
         on_delete=models.PROTECT
     )
     quantity = models.PositiveIntegerField()
-    price_at_sale = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2
-    )  # Guardar el precio en el momento de la venta
+    price_at_sale = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
     def subtotal(self):
-        return self.price_at_sale * self.quantity        
+        return self.price_at_sale * self.quantity

@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from web3 import AsyncWeb3, WebSocketProvider
 from web3.utils.subscriptions import LogsSubscription
-from payments.models import Transaction
+from payments.models import Cart, OrderItem, Transaction
 from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
@@ -75,15 +75,14 @@ class Command(BaseCommand):
             for attempt in range(max_retries):
                 try:
                     tx = await sync_to_async(
-                        Transaction.objects.get
+                        Transaction.objects.select_related('cart').get
                     )(
                         id=id,
                         wallet_address__iexact=sender_address
                     )
                     break
                 except Transaction.DoesNotExist:
-                    if attempt == max_retries - 1:  # Último intento fallido
-                        # Buscar la transacción para marcarla como fallida
+                    if attempt == max_retries - 1:
                         tx_failed = await sync_to_async(
                             Transaction.objects.filter(
                                 id=id,
@@ -93,9 +92,9 @@ class Command(BaseCommand):
                         if tx_failed:
                             tx_failed.status = 'failed'
                             await sync_to_async(tx_failed.save)()
-                            logger.error(f"Transacción {id} marcada como FAILED (no encontrada en blockchain)")
+                            logger.error(f"Transacción {id} marcada como FAILED")
                         else:
-                            logger.error(f"Transacción {id} no existe en la base de datos")
+                            logger.error(f"Transacción {id} no existe")
                         return
 
                     delay = base_delay * (2 ** attempt)
@@ -104,24 +103,46 @@ class Command(BaseCommand):
 
             if tx.status == 'confirmed':
                 logger.info(f"Transacción {tx.id} ya confirmada.")
+                return
+
+            # Marcar como confirmada
+            tx.status = 'confirmed'
+            tx.transaction_hash = tx_hash
+            await sync_to_async(tx.save)()
+            logger.info(f"Transacción {tx.id} confirmada y procesada.")
+
+            cart = await sync_to_async(
+                lambda: Cart.objects.filter(transaction=tx.id).first()
+            )()
+
+            # Procesar carrito si existe
+            if cart:
+                logger.info(f"Carrito encontrado.")
+                # 1. Crear OrderItems para historial
+                cart_items = await sync_to_async(
+                    lambda: list(cart.items.all().select_related('product'))
+                )()
+
+                for item in cart_items:
+                    await sync_to_async(OrderItem.objects.create)(
+                        transaction=tx,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price_at_sale=item.product.amount_usd
+                    )
+
+                    # 2. Actualizar stock
+                    item.product.quantity = max(item.product.quantity - item.quantity, 0)
+                    await sync_to_async(item.product.save)()
+
+                # 3. Marcar carrito como inactivo y limpiar items
+                cart.is_active = False
+                logger.info(f"Carrito desactivado.")
+
+                await sync_to_async(cart.clear_items)()
+                await sync_to_async(cart.save)()
             else:
-                tx.status = 'confirmed'
-                tx.transaction_hash = tx_hash
-
-                # Generar resumen de compra antes de eliminar el carrito
-                summary = await sync_to_async(tx.generate_purchase_summary)()
-                tx.purchase_summary = summary
-
-                await sync_to_async(tx.save)()
-                logger.info(f"Transacción {tx.id} confirmada y guardada.")
-
-                # Eliminar carrito y sus ítems si existe
-                if tx.cart:
-                    await sync_to_async(tx.cart.delete_with_items)()
-                    logger.info(f"Carrito {tx.cart_id} eliminado tras confirmación de transacción.")
-
+                logger.info(f"Carrito NO encontrado.")
 
         except Exception as e:
-            logger.error(f"Error procesando evento: {e}")
-
-
+            logger.error(f"Error procesando evento: {e}", exc_info=True)

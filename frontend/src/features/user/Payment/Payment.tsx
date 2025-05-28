@@ -11,6 +11,7 @@ import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { ApiError, Transaction } from "@/shared/types/types";
 import { axiosAPI } from "../services/userApi";
+import { FaCheckCircle } from "react-icons/fa";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -34,8 +35,9 @@ export interface PendingTransaction {
 }
 
 export function Payment() {
-  const { address, isAuthenticated, isWalletRegistered, isLoading: isAuthLoading } = useWallet();
-  const { cart, cartLoading, deleteCart } = useCart();
+  const navigate = useNavigate();
+  const { address, isWalletRegistered, isLoading: isAuthLoading } = useWallet();
+  const { cart, setCart, cartLoading } = useCart();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
@@ -45,31 +47,159 @@ export function Payment() {
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
   const [checkingStock, setCheckingStock] = useState(false);
   const [transaction_id, setTransactionId] = useState<number | null>(null);
-  const navigate = useNavigate();
   const { data: hash, writeContract, isPending: isTransactionPending, error: writeError } = useWriteContract();
   const { data: approveHash, writeContract: writeApprove, isPending: isApprovePending, error: writeApproveError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const { isLoading: isApproving, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
-  const [progressMessage, setProgressMessage] = useState("");
 
   const showToast = useCallback((type: 'info' | 'error' | 'success', title: string, message: string) => {
     toaster.create({ title, description: message, type, duration: type === 'error' ? 5000 : 3000 });
   }, []);
 
+  const getProgressSteps = (token: keyof typeof TOKEN_DECIMALS) => [
+    {
+      title: 'Autenticando en el sistema',
+      description: 'Firma el mensaje en tu wallet',
+      status: 'pending'
+    },    
+    {
+      title: token === 'ETH' ? 'Confirmando transacción' : 'Aprobando token',
+      description: 'Confirma en tu wallet',
+      status: 'pending'
+    },
+    {
+      title: 'Registrando transacción',
+      description: 'Guardando en nuestro sistema',
+      status: 'pending'
+    },
+    {
+      title: 'Enviando transacción a la blockchain',
+      description: 'Confirma en tu wallet',
+      status: 'pending'
+    },
+    {
+      title: 'Esperando confirmación',
+      description: 'Puede tomar unos minutos...',
+      status: 'pending'
+    }
+  ];  
+
+  type PaymentStep = 
+    | 'idle'
+    | 'authLoading'
+    | 'approving'
+    | 'registering'
+    | 'sending'
+    | 'confirming'
+    | 'completed';
+
+  const [paymentStep, setPaymentStep] = useState<PaymentStep>('idle');
+
+  const renderPaymentProgress = () => {
+    const steps = getProgressSteps(token);
+    let activeStep = 0;
+    
+    if (paymentStep === 'authLoading') activeStep = 0;
+    else if (paymentStep === 'approving') activeStep = 1;
+    else if (paymentStep === 'registering') activeStep = 2;
+    else if (paymentStep === 'sending') activeStep = 3;
+    else if (paymentStep === 'confirming') activeStep = 4;
+
+    return (
+      <VStack align="stretch" spaceY={4} p={4}>
+        {steps.map((step, index) => {
+          // No renderizar el paso 0 (index 0) si token es ETH y estamos en approving
+          if (token === "ETH" && index === 1) {
+            console.log("Saltando");
+            return null;
+          }
+          
+          return (
+            <HStack key={index} align="flex-start">
+              <Box pt={1}>
+                {index < activeStep ? (
+                  <FaCheckCircle color="green" />
+                ) : index === activeStep ? (
+                  <Spinner size="sm" color="blue.500" />
+                ) : (
+                  <Box 
+                    w="16px" 
+                    h="16px" 
+                    borderRadius="full" 
+                    border="2px" 
+                    borderColor="gray.300" 
+                  />
+                )}
+              </Box>
+              <Box>
+                <Text 
+                  fontWeight={index <= activeStep ? 'bold' : 'normal'}
+                  color={index === activeStep ? 'blue.600' : 'inherit'}
+                >
+                  {step.title}
+                </Text>
+                <Text fontSize="sm" color="gray.500">
+                  {step.description}
+                </Text>
+              </Box>
+            </HStack>
+          );
+        })}      
+      </VStack>
+    );
+  };
+
+  const convertToTokenUnits = useCallback((amount: string, tokenType: keyof typeof TOKEN_DECIMALS) => {
+    const sanitizedAmount = amount.includes('.') ? amount : `${amount}.0`;
+    const [integerPart, decimalPart = ''] = sanitizedAmount.split('.');
+    const decimals = decimalPart.padEnd(TOKEN_DECIMALS[tokenType], '0').slice(0, TOKEN_DECIMALS[tokenType]);
+    return BigInt(`${integerPart}${decimals}`);
+  }, []);
+
+  const cleanupFailedTransaction = async () => {
+    if (transaction_id) {
+      await axiosAPI.deleteTransaction(transaction_id);
+      setTransactionId(null);
+    }
+    setPendingTx(null);
+  };
 
   useEffect(() => {
     if (writeError || writeApproveError) {
-      const cleanupFailedTransaction = async () => {
-        if (transaction_id) {
-          await axiosAPI.deleteTransaction(transaction_id);
-          setTransactionId(null);
-        }
-        setPendingTx(null);
-      };
       cleanupFailedTransaction();
-      showToast('error', "Error en transacción", (writeError ? writeError.message : writeApproveError ? writeApproveError.message : 'Error desconocido'));
+      // showToast('error', "Error en transacción", (writeError ? writeError.message : writeApproveError ? writeApproveError.message : 'Error desconocido'));
     }
-  }, [writeError, writeApproveError, showToast]);
+  }, [writeError, writeApproveError]);
+
+  useEffect(() => {
+    if (token !== "ETH" && isAuthLoading) {
+      setPaymentStep('authLoading');
+    }
+  }, [isAuthLoading, token]);
+
+  useEffect(() => {
+    if (token !== "ETH" && isApprovePending) {
+      setPaymentStep('approving');
+    }
+  }, [isApprovePending, token]);
+
+  useEffect(() => {
+    if (isApproveConfirmed && pendingTx) {
+      setPaymentStep('registering');
+    }
+  }, [isApproveConfirmed, pendingTx]);
+
+  useEffect(() => {
+    if (isTransactionPending) {
+      setPaymentStep('sending');
+    }
+  }, [isTransactionPending]);
+
+  useEffect(() => {
+    if (isConfirming) {
+      setPaymentStep('confirming');
+    }
+  }, [isConfirming]);
 
   // 1. Validación del carrito
   useEffect(() => {
@@ -115,7 +245,6 @@ export function Payment() {
   // 2. Actualización y obtención de detalles de transacción
   useEffect(() => {
     if (isConfirmed && pendingTx && transaction_id) {
-      setProgressMessage("Finalizando transacción...");      
       const updateAndFetchTransaction = async () => {
         try {
           // Actualizar la transacción
@@ -130,7 +259,6 @@ export function Payment() {
           );
           
           if (!updateResponse.data.success) {
-            setProgressMessage("");
             throw new Error(updateResponse.data.message || "Error al actualizar la transacción");
           }
   
@@ -138,24 +266,26 @@ export function Payment() {
           const detailsResponse = await axiosAPI.getTransactionDetails(hash);
           
           if (detailsResponse.data.success && detailsResponse.data.transaction) {
-            // deleteCart();
+            setCart([]);
             setTransaction(detailsResponse.data.transaction);
             setPaymentCompleted(true);
-            showToast('success', "Enhorabuena!", updateResponse.data.message);
+            showToast('success', "¡Enhorabuena!", updateResponse.data.message);
           } else {
             throw new Error(detailsResponse.data.message || "Error al obtener detalles de la transacción");
           }
         } catch (error) {
-          setProgressMessage("");
-          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+          cleanupFailedTransaction();
+          const apiError = error as ApiError;
+          const errorMessage = apiError.response ? apiError.response.data.message : "Error desconocido";  
           showToast('error', "Error en el servidor", errorMessage);
+          console.error("Error en el servidor:", errorMessage);
           setPendingTx(null);
         }
       };
   
       updateAndFetchTransaction();
     }
-  }, [isConfirmed, hash, address, showToast, transaction_id]);
+  }, [isConfirmed, hash, address, transaction_id]);
 
   // 3. Polling de estado de transacción
   useEffect(() => {
@@ -188,28 +318,40 @@ export function Payment() {
   }, [hash, paymentCompleted]); 
 
   useEffect(() => {
-    if (isApproveConfirmed && pendingTx && token !== "ETH" && transaction_id) {
-      setProgressMessage("Ejecutando transferencia del token...");      
-      const amountInUnits = convertToTokenUnits(pendingTx.amount, token);
-      const paymentFunctionName = token === "USDC" ? "payUSDC"
-        : token === "USDT" ? "payUSDT"
-        : "payLINK";
+    if (token !== "ETH" && isApproveConfirmed && pendingTx) {
+      const executeTokenPayment = async () => {
+        try {
+          
+          // Registrar siempre una nueva transacción para tokens no ETH
+          const registerResponse = await axiosAPI.registerTransaction({
+            wallet_address: address!,
+            amount: pendingTx.amount,
+            token: pendingTx.token
+          });
+          setTransactionId(registerResponse.data.transaction_id);
 
-      writeContract({
-        address: CONTRACT_ADDRESSES.PAYMENT,
-        abi: ContractABI,
-        functionName: paymentFunctionName,
-        args: [amountInUnits, transaction_id],
-      });
+          const amountInUnits = convertToTokenUnits(pendingTx.amount, pendingTx.token);
+          const paymentFunctionName = pendingTx.token === "USDC" ? "payUSDC"
+            : pendingTx.token === "USDT" ? "payUSDT"
+            : "payLINK";
+
+          writeContract({
+            address: CONTRACT_ADDRESSES.PAYMENT,
+            abi: ContractABI,
+            functionName: paymentFunctionName,
+            args: [amountInUnits, registerResponse.data.transaction_id],
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+          showToast('error', "Error en el pago", errorMessage);
+          setPendingTx(null);
+          setTransactionId(null);
+        }
+      };
+
+      executeTokenPayment();
     }
-  }, [isApproveConfirmed, pendingTx, token, writeContract, transaction_id]);
-
-  const convertToTokenUnits = useCallback((amount: string, tokenType: keyof typeof TOKEN_DECIMALS) => {
-    const sanitizedAmount = amount.includes('.') ? amount : `${amount}.0`;
-    const [integerPart, decimalPart = ''] = sanitizedAmount.split('.');
-    const decimals = decimalPart.padEnd(TOKEN_DECIMALS[tokenType], '0').slice(0, TOKEN_DECIMALS[tokenType]);
-    return BigInt(`${integerPart}${decimals}`);
-  }, []);
+  }, [isApproveConfirmed, pendingTx, token, writeContract, address, convertToTokenUnits, showToast]);
 
   // 4. Registro de transacción inicial
   const handlePayment = async (amount: string, token: keyof typeof TOKEN_DECIMALS) => {
@@ -217,29 +359,26 @@ export function Payment() {
       showToast('error', "Error", "Por favor, conecta tu wallet primero.");
       return;
     }
-         
+        
     const decimalCount = amount.split('.')[1]?.length || 0;
     if (decimalCount > TOKEN_DECIMALS[token]) {
       showToast('error', "Error", `Máximo ${TOKEN_DECIMALS[token]} decimales permitidos`);
       return;
     }
-  
-    try {
-      // Registrar transacción pendiente sin hash
-      setProgressMessage("Registrando transacción en el sistema...");
-      const registerResponse = await axiosAPI.registerTransaction({
-        wallet_address: address,
-        amount,
-        token
-      });
-  
-      setTransactionId(registerResponse.data.transaction_id);
-      setPendingTx({ amount, token });
 
+    try {
+      setPendingTx({ amount, token });
       const amountInUnits = convertToTokenUnits(amount, token);
-  
+
       if (token === "ETH") {
-        setProgressMessage("Confirmando transacción de ETH en tu wallet...");        
+        // Para ETH, registramos la transacción primero
+        const registerResponse = await axiosAPI.registerTransaction({
+          wallet_address: address,
+          amount,
+          token
+        });
+        setTransactionId(registerResponse.data.transaction_id);
+        
         await writeContract({
           address: CONTRACT_ADDRESSES.PAYMENT,
           abi: ContractABI,
@@ -248,7 +387,6 @@ export function Payment() {
           value: amountInUnits,
         });
       } else {
-        setProgressMessage("Aprobando gasto del token en tu wallet...");        
         await writeApprove({
           address: CONTRACT_ADDRESSES.TOKENS[token],
           abi: StandardERC20ABI,
@@ -256,19 +394,18 @@ export function Payment() {
           args: [CONTRACT_ADDRESSES.PAYMENT, amountInUnits],
         });
       }
-  
     } catch (error: unknown) {  
-      setProgressMessage("");
       const apiError = error as ApiError;
-      const errorMessage = apiError.response.data.message;
+      const errorMessage = apiError.response ? apiError.response.data.message : "Error desconocido";
       
       showToast('error', "Error en transacción", errorMessage);
       console.error("Error en transacción:", errorMessage);
       setPendingTx(null);
     }
   };
-  const isLoadingState = isTransactionPending || isConfirming || isApproving || isAuthLoading;
+  const isLoadingState = isTransactionPending || isConfirming || isApproving || isApprovePending || isAuthLoading;
   const totalUSD = cart.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
+
 
   if (paymentCompleted && transactionData) {
     return (
@@ -282,10 +419,10 @@ export function Payment() {
           </Box>
           <Button 
             colorPalette="blue" 
-            onClick={() => navigate("/products-catalog")}
+            onClick={() => navigate("/payments-history")}
             mt={4}
           >
-            Volver a la tienda
+            Ir al historial de compras
           </Button>
         </VStack>
       </Box>
@@ -304,6 +441,7 @@ export function Payment() {
             colorPalette="blue" 
             onClick={() => navigate("/payments-history")}
             mt={4}
+            width="full"
           >
             Historial de Compras
           </Button>
@@ -419,64 +557,50 @@ export function Payment() {
         {/* Columna derecha - Formulario de pago */}
         {cart.length > 0 && (
           <GridItem>
-            <Box p={6} position="sticky" top="20px">
-            {isLoadingState || isApprovePending ? (
-              <VStack gap={4}>
-                <Spinner 
-                  size="lg" 
-                  color="blue.500"
+            <Box maxW="500px">
+              {writeError || writeApproveError ? (
+                <Box p={6} overflowX="auto">
+                  <Text overflowX="auto" fontSize="sm" color="red.500" textAlign="center">
+                    Error: {writeError?.message || writeApproveError?.message}
+                  </Text>
+                  <Button 
+                    mt={4}
+                    colorPalette="blue" 
+                    onClick={() => window.location.reload()}
+                    width="full"
+                  >
+                    Reintentar pago
+                  </Button>
+                </Box>
+              ) : isLoadingState ? (
+                <Box pl={6}>
+                  <Heading size="lg" mb={6} textAlign="left">Proceso de transacción</Heading>
+                  {renderPaymentProgress()}
+                </Box>
+              ) : !isWalletRegistered ? (
+                <VStack gap={4} p={6}>
+                  <Text textAlign="center">
+                    Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, 
+                    es necesario registrar la wallet y firmar un mensaje para verificar que eres el propietario.
+                  </Text>
+                  <Button 
+                    colorPalette="blue" 
+                    onClick={() => navigate("/register-wallet")}
+                  >
+                    Ir al registro de wallet
+                  </Button>
+                </VStack>
+              ) : (
+                <PaymentForm
+                  onSubmit={handlePayment}
+                  isProcessing={isLoadingState}
+                  selectedToken={token}
+                  setSelectedToken={setToken}
+                  amount={amount}
+                  setAmount={setAmount}
+                  isWalletRegistered={isWalletRegistered}
                 />
-                <Text textAlign="center" fontSize="md">
-                  {progressMessage || "Procesando tu transacción..."}
-                </Text>
-                {!isAuthenticated && (
-                  <Text fontSize="sm" color="blue.600">
-                    Por favor, confirma la solicitud de firma en tu wallet
-                  </Text>
-                  )
-                }                                
-                {(isApproving || isApprovePending) && (
-                  <Text fontSize="sm" color="blue.600">
-                    Por favor confirma la operación en tu wallet
-                  </Text>
-                )}
-                {isConfirming && (
-                  <VStack spaceY={1}>
-                    <Text fontSize="sm" opacity={0.7}>
-                      La transacción está siendo confirmada en la blockchain
-                    </Text>
-                    <Text fontSize="xs" opacity={0.6}>
-                      Esto puede tomar unos momentos...
-                    </Text>
-                  </VStack>
-                )}
-              </VStack>
-            ) : !isWalletRegistered ? (
-              <VStack gap={4}>
-                <Text textAlign="center">
-                  Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, 
-                  es necesario registrar la wallet y firmar un mensaje para verificar que eres el propietario.
-                </Text>
-                <Button 
-                  colorPalette="blue" 
-                  onClick={() => navigate("/register-wallet")}
-                  width="full"
-                >
-                  Ir al registro de wallet
-                </Button>
-              </VStack>
-            ) : (
-              <PaymentForm
-                onSubmit={handlePayment}
-                isProcessing={isLoadingState}
-                selectedToken={token}
-                setSelectedToken={setToken}
-                amount={amount}
-                setAmount={setAmount}
-                isWalletRegistered={isWalletRegistered}
-                isAuthenticated={isAuthenticated}
-              />          
-            )}
+              )}
             </Box>
           </GridItem>
         )}

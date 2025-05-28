@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
 import { Box, Text, Button, Heading, Spinner, Stack, HStack, VStack, Icon, Badge, Card, CardBody, CardHeader, CardFooter, SimpleGrid, IconButton } from "@chakra-ui/react";
 import { toaster } from "@/shared/components/ui/toaster";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +7,9 @@ import WalletAddress from "@/shared/components/TruncatedAddress";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
+import { authUserAPI } from "../services/userApi";
+import { useWallet } from "@/shared/context/useWallet";
+import { useAuthDialog } from "../context/AuthDialogContext";
 
 interface Transaction {
   transaction_hash: string;
@@ -18,35 +20,60 @@ interface Transaction {
 }
 
 export default function Home() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, isAuthenticated, setIsAuthenticated } = useWallet();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  
+  const { requireAuth } = useAuthDialog();
+
   useEffect(() => {
-    if (isConnected && address) {
+    if (address) {
       setLoading(true);
-      fetch(`http://localhost:8000/payments/transactions/${address}`)
-        .then((res) => res.json())
-        .then((data: { transactions: Transaction[] }) => setTransactions(data.transactions))
-        .catch((error) => console.error("Error fetching transactions:", error))
-        .finally(() => setLoading(false));
+      
+      if (!isAuthenticated) {
+        const autoAuth = async () => {    
+          const success = await requireAuth();
+          if (!success) {
+            console.warn("El usuario canceló la autenticación.");
+          }else{
+            setIsAuthenticated(true);
+          }                  
+        };
+        autoAuth();
+      }
+      
+      authUserAPI.getUserTransactions(address)
+        .then(response => {
+          setTransactions(response.data.transactions);
+        })
+        .catch(() => {
+          setTransactions([]);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [isConnected, address]);
+  }, [address, isAuthenticated, requireAuth, setIsAuthenticated]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toaster.create({ title: "Dirección copiada", type: "success", duration: 2000});    
   };
 
+
   const getStatusColor = (status: string) => {
-    switch(status.toLowerCase()) {
-      case 'completed': return 'green';
-      case 'pending': return 'yellow';
-      case 'failed': return 'red';
-      default: return 'blue';
-    }
+      switch (status.toLowerCase()) {
+          case 'confirmed':
+              return 'green';
+          case 'pending':
+              return 'yellow';
+          case 'failed':
+              return 'red';
+          default:
+              return 'gray';
+      }
   };
+
 
   return (
     <Box p={{ base: 4, md: 8 }} maxW="1200px" mx="auto">
@@ -226,12 +253,11 @@ export default function Home() {
                       </Card.Root>
                     ))}
                 </Stack>
+              ) : !isAuthenticated ? (
+                <Text>Necesitas autenticarte para ver las transacciones.</Text>
               ) : (
                 <Box textAlign="center" py={10}>
-                  <Text color="gray.500">No tienes transacciones registradas aún.</Text>
-                  <Button mt={4} colorPalette="blue" onClick={() => navigate("/payment")}>
-                    Realizar primer pago
-                  </Button>
+                  <Text color="gray.500">No se encontraron transacciones.</Text>
                 </Box>
               )}
             </CardBody>

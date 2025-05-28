@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { API_PATHS } from "@/config/paths";
 import { ApiCartItem, CartContextType, CartItem, Product } from "@/shared/types/types";
 import { useWallet } from "@/shared/context/useWallet";
-import { authUserAxios } from "../auth/authUserAxios";
 import { axiosAPI } from "../services/userApi";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -120,16 +118,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const deleteCart = async () => {
-    if (!address || cartError) return;
-    try {
-      await axiosAPI.deleteCart(address);
-      setCart([]);
-    } catch (err){
-      console.error("Error limpiando carrito en backend:", err);
-    }
-  }
-
   // Función para cargar el carrito desde el backend
   useEffect(() => {
     const loadCart = async () => {
@@ -138,7 +126,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCartLoading(true);
       setCartError(false);
       try {
-        const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-cart/${address}`);
+        const { data } = await axiosAPI.getCart(address);
 
         if (Array.isArray(data?.items)) {
           const restored = data.items.map((item: ApiCartItem) => ({
@@ -177,7 +165,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addToCart,
         removeFromCart,
         clearCart,
-        deleteCart,
         setCart,
         cartLoading,
         setCartLoading,

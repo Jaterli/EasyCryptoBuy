@@ -23,13 +23,6 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [AllowAny()]  # Permite GET sin login
         return [IsAdminUser()]  # Protege POST, PUT, DELETE
 
-
-# class SaleViewSet(viewsets.ReadOnlyModelViewSet):
-#     queryset = Sale.objects.select_related("product").all().order_by("-created_at")
-#     serializer_class = SaleSerializer
-#     permission_classes = [IsAdminUser]
-
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def validate_cart(request):
@@ -100,7 +93,6 @@ def get_user_transactions_company(request, wallet_address):
                 'transaction_hash': transaction.transaction_hash,
                 'created_at' : transaction.created_at,
                 'token': transaction.token,
-                'purchase_summary': transaction.purchase_summary,
             }
             for transaction in transactions
         ]
