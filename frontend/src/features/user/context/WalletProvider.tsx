@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAccount, useDisconnect } from "wagmi";
-import { authUserAPI } from "@/features/user/services/userApi";
+import { axiosUserAPI } from "@/features/user/services/userApi";
 import { useWalletAuth } from "../auth/WalletAuthService";
 
 export interface WalletContextType {
@@ -27,9 +27,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const checkWalletRegistration = useCallback(async () => {
     if (!address) return;
+   
     setIsLoading(true);
+    
     try {
-      const response = await authUserAPI.checkWallet(address);
+      const response = await axiosUserAPI.checkWallet(address);
       setIsWalletRegistered(response.data.isRegistered);
     } catch (error) {
       console.error("Registration check error:", error);
@@ -41,13 +43,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const authenticate = useCallback(async (): Promise<boolean> => {
     if (!address) return false;
+   
     setIsLoading(true);
     
     try {
       const result = await authenticateWallet(address);
       if (result.success) {
         setIsAuthenticated(true);
-        return true;
+        return true
       }
       return false;
     } finally {
@@ -75,24 +78,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (storedToken) {
           try {
             console.log("Intentando recuperar el token...")
-            const verifyResponse = await authUserAPI.verifyToken(storedToken);
+            const verifyResponse = await axiosUserAPI.verifyToken(storedToken);
             if (verifyResponse.data.valid && 
                 verifyResponse.data.wallet.toLowerCase() === address.toLowerCase()) {
                   console.log("Token recuperado.")
                   setIsAuthenticated(true);
             } else {
-              console.error("No se ha podido recuperar el token.");
+              console.error(verifyResponse.data.error);
               setIsAuthenticated(false);
               disconnectWallet();
             }
           } catch (error) {
-            console.error("Authentication error:", error);
+            console.error("Error en la autenticación:", error);
             setIsAuthenticated(false);
             disconnectWallet();
           }
         }
       } else {
-        console.error("Wallet no conectada.");
+        console.warn("Wallet no conectada.");
       }
     };
 

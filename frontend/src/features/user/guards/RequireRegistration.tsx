@@ -1,4 +1,4 @@
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -17,7 +17,14 @@ const RequireRegistration = ({ children }: RequireRegistrationProps) => {
     }
   }, [isWalletRegistered, isLoading]);
 
-  if (!isWalletRegistered) return null;
+  if (!isWalletRegistered){
+    return (
+      <div style={{ textAlign: 'center', padding: '20px' }}>
+        <h2 style={{ color: '#e74c3c' }}>Registro requerido!</h2>
+        <p>Para continuar, necesitas registrarte.</p>
+      </div>
+    );
+  } 
   return <>{children}</>;
 };
 

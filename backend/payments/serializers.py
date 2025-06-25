@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Cart, CartItem, OrderItem
+from .models import Transaction, Cart, CartItem, OrderItem
 from company.models import Product
+
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.PrimaryKeyRelatedField(source='product', queryset=Product.objects.all())
@@ -14,24 +15,24 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 
 class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True)
+    cart_items = CartItemSerializer(many=True)
 
     class Meta:
         model = Cart
-        fields = ('id', 'user', 'items', 'created_at', 'updated_at')
+        fields = ('id', 'user', 'cart_items', 'created_at', 'updated_at')
         read_only_fields = ('user',)
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
+        cart_items_data = validated_data.pop('cart_items')
         cart = Cart.objects.create(**validated_data)
-        for item_data in items_data:
+        for item_data in cart_items_data:
             CartItem.objects.create(cart=cart, **item_data)
         return cart
 
     def update(self, instance, validated_data):
-        items_data = validated_data.pop('items', [])
-        instance.items.all().delete()
-        for item_data in items_data:
+        cart_items_data = validated_data.pop('cart_items', [])
+        instance.cart_items.all().delete()
+        for item_data in cart_items_data:
             CartItem.objects.create(cart=instance, **item_data)
         instance.save()
         return instance
@@ -48,4 +49,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity', 'price_at_sale']
+        fields = ['id', 'product', 'quantity', 'price_at_sale', 'status', 'subtotal', 'created_at']
+
+
+class TransactionDetailSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True)
+
+    class Meta:
+        model = Transaction
+        fields = ['transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items']

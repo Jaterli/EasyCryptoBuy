@@ -204,26 +204,33 @@ def check_pending_transactions(request, wallet_address):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def generate_invoice(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id)
+    order_items = transaction.order_items.select_related('product').all()
+
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="factura_{transaction.id}.pdf"'
+    
     doc = SimpleDocTemplate(response, pagesize=letter)
     elements = []
     styles = getSampleStyleSheet()
+
+    # Título
     title = Paragraph(f'<font size=18><b>Factura de Pago - #{transaction.id}</b></font>', styles['Title'])
     elements.append(title)
     elements.append(Spacer(1, 12))
+
+    # Información general de la transacción
     hash_style = styles["Normal"]
     hash_style.fontSize = 9
     transaction_info = [
         ['ID de Transacción', str(transaction.id)],
-        ['Fecha', str(transaction.created_at)],
+        ['Fecha', transaction.created_at.strftime('%Y-%m-%d %H:%M:%S')],
         ['Wallet', transaction.wallet_address],
         ['Monto', f'{format_scientific_to_decimal(transaction.amount)} {transaction.token}'],
         ['Hash de Transacción', Paragraph(transaction.transaction_hash, hash_style)],
-        ['Estado', transaction.status]
+        ['Estado', transaction.status.title()],
     ]
     table = Table(transaction_info, colWidths=[200, 350])
     table.setStyle(TableStyle([
@@ -236,15 +243,55 @@ def generate_invoice(request, transaction_id):
         ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('WORDWRAP', (1, 4), (1, 4), True),
     ]))
     elements.append(table)
     elements.append(Spacer(1, 24))
-    message = Paragraph("<font size=12>Gracias por realizar el pago. Si tiene alguna duda, no dude en ponerse en contacto con nosotros.</font>", styles['Normal'])
-    elements.append(message)
+
+    # Tabla de productos
+    if order_items:
+        elements.append(Paragraph("<b>Productos Comprados:</b>", styles['Heading4']))
+        elements.append(Spacer(1, 6))
+
+        product_data = [['Producto', 'Cantidad', 'Precio Unitario', 'Subtotal']]
+        total = 0
+
+        for item in order_items:
+            subtotal = item.subtotal
+            total += subtotal
+            product_data.append([
+                item.product.name,
+                str(item.quantity),
+                f"{item.price_at_sale:.2f} {transaction.token}",
+                f"{subtotal:.2f} {transaction.token}"
+            ])
+
+        product_data.append(['', '', 'Total:', f"{total:.2f} {transaction.token}"])
+
+        product_table = Table(product_data, colWidths=[200, 100, 120, 130])
+        product_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (1, 1), (-1, -2), 'CENTER'),
+            ('ALIGN', (-2, -1), (-1, -1), 'RIGHT'),
+        ]))
+        elements.append(product_table)
+        elements.append(Spacer(1, 24))
+    else:
+        elements.append(Paragraph("<i>No se encontraron productos asociados a esta transacción.</i>", styles['Normal']))
+        elements.append(Spacer(1, 24))
+
+    # Mensaje final
+    elements.append(Paragraph(
+        "<font size=12>Gracias por realizar el pago. Si tiene alguna duda, no dude en ponerse en contacto con nosotros.</font>",
+        styles['Normal']
+    ))
     elements.append(Spacer(1, 12))
-    footer = Paragraph("<font size=10><i>Este es un documento generado automáticamente. No requiere firma.</i></font>", styles['Normal'])
-    elements.append(footer)
+    elements.append(Paragraph(
+        "<font size=10><i>Este es un documento generado automáticamente. No requiere firma.</i></font>",
+        styles['Normal']
+    ))
+
     doc.build(elements)
     return response
 
@@ -252,9 +299,12 @@ def generate_invoice(request, transaction_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_user_transactions(request, wallet_address):
-    transactions = get_list_or_404(
-        Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
-    )
+
+    try:
+        transactions = Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
+    except Transaction.DoesNotExist:
+        return Response({"success": False, "error": "No se han encontrado transacciones."}, status=status.HTTP_404_NOT_FOUND)
+
     data = {
         'transactions': [
             {
@@ -338,7 +388,7 @@ def save_cart(request):
 def delete_cart(request, wallet_address):
     wallet = wallet_address
     if not wallet:
-        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"success": False, "error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         with transaction.atomic():  # Todas las operaciones se ejecutan o ninguna. transaction viene de django.db
@@ -347,27 +397,27 @@ def delete_cart(request, wallet_address):
             cart.delete_with_items()
             return Response({"success": True, "message": "Carrito eliminado"})
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
 @api_view(["DELETE"])
 @permission_classes([AllowAny])
 def clear_cart(request, wallet_address):
     if not wallet_address:
-        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"success": False, "error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         with transaction.atomic():
             profile = UserProfile.objects.get(wallet_address=wallet_address)
             cart = Cart.objects.get(user=profile, is_active=True)
-            cart.items.all().delete()  # Solo eliminamos los ítems
+            cart.cart_items.all().delete()  # Solo eliminamos los ítems
             return Response({"success": True, "message": "Ítems del carrito eliminados"})
     except UserProfile.DoesNotExist:
-        return Response({"error": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": False, "error": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     except Cart.DoesNotExist:
-        return Response({"error": "Carrito no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": False, "error": "Carrito no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -377,8 +427,8 @@ def get_transaction_order_items(request, transaction_id):
     try:
         transaction = Transaction.objects.get(id=transaction_id)
     except Transaction.DoesNotExist:
-        return Response({"sussess": False, "message": "Transacción no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": False, "error": "Transacción no encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
     order_items = OrderItem.objects.filter(transaction=transaction)
     serializer = OrderItemSerializer(order_items, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"success": True, "orderItems":serializer.data}, status=status.HTTP_200_OK)

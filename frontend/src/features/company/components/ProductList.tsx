@@ -14,6 +14,8 @@ import {
   IconButton,
   Select,
   createListCollection,
+  Center,
+  Spinner,
 } from "@chakra-ui/react";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
@@ -35,19 +37,27 @@ export const ProductList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { open: isDialogOpen, onOpen, onClose } = useDisclosure();
-
+  const [isLoading, setIsLoading] = useState(true);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentProducts = products.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(products.length / itemsPerPage);
 
   const loadProducts = async () => {
-    const data = await authCompanyAPI.getProducts();
-    setProducts(data);
-    setSelectedProducts([]);
-    if (currentPage > Math.ceil(data.length / itemsPerPage)) {
-      setCurrentPage(1);
-    }
+    setIsLoading(true);
+    try{ 
+      const data = await authCompanyAPI.getProducts();
+      setProducts(data);
+      setSelectedProducts([]);
+
+      if (currentPage > Math.ceil(data.length / itemsPerPage)) {
+        setCurrentPage(1);
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+   }   
   };
 
   const handleSave = async (product: Product) => {
@@ -136,7 +146,11 @@ export const ProductList: React.FC = () => {
           </IconButton>
       </Flex>
 
-      {products.length === 0 ? (
+      {isLoading ? (
+        <Center py={10}>
+          <Spinner size="xl" color="blue.500" />
+        </Center>
+      ) : products.length === 0 ? (
         <Text fontSize="md" color="gray.500" textAlign="center" py={6}>
           No se han encontrado productos.
         </Text>

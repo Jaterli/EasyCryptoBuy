@@ -5,13 +5,13 @@ import { toaster } from "@/shared/components/ui/toaster";
 import ContractABI from "@/abis/PAYMENT_CONTRACT_ABI.json";
 import StandardERC20ABI from "@/abis/ERC20.json";
 import { PaymentForm } from "./PaymentForm";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import { useNavigate } from "react-router-dom";
-import TransactionData from "../components/TransactionData";
+import TransactionData from "../components/TransactionDataForUser";
 import { useCart } from "@/features/user/context/CartContext";
 import { ApiError, Transaction } from "@/shared/types/types";
-import { axiosAPI } from "../services/userApi";
 import { FaCheckCircle } from "react-icons/fa";
+import { axiosUserAPI } from "../services/userApi";
 
 const CONTRACT_ADDRESSES = {
   PAYMENT: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
@@ -158,7 +158,7 @@ export function Payment() {
 
   const cleanupFailedTransaction = async () => {
     if (transaction_id) {
-      await axiosAPI.deleteTransaction(transaction_id);
+      await axiosUserAPI.deleteTransaction(transaction_id);
       setTransactionId(null);
     }
     setPendingTx(null);
@@ -207,7 +207,7 @@ export function Payment() {
       const validateCart = async () => {
         setCheckingStock(true);
         try {
-          const response = await axiosAPI.validateCart(
+          const response = await axiosUserAPI.validateCart(
             cart.map(item => ({ id: item.product.id, quantity: item.quantity }))
           );
           setStockIssues(response.data.invalid || []);
@@ -227,7 +227,7 @@ export function Payment() {
       const checkForPendingTx = async  () => {
         try {
           console.log("Comprobando si hay transacciones pendientes...");
-          const { data } = await axiosAPI.checkPendingTransactions(address);       
+          const { data } = await axiosUserAPI.checkPendingTransactions(address);       
           if (data.success) {
             setChekPendingTx(data.has_pending);
             return;
@@ -248,7 +248,7 @@ export function Payment() {
       const updateAndFetchTransaction = async () => {
         try {
           // Actualizar la transacción
-          const updateResponse = await axiosAPI.updateTransaction(
+          const updateResponse = await axiosUserAPI.updateTransaction(
             transaction_id,
             {
               wallet_address: address,
@@ -263,7 +263,7 @@ export function Payment() {
           }
   
           // Obtener detalles
-          const detailsResponse = await axiosAPI.getTransactionDetails(hash);
+          const detailsResponse = await axiosUserAPI.getTransactionDetails(hash);
           
           if (detailsResponse.data.success && detailsResponse.data.transaction) {
             setCart([]);
@@ -294,7 +294,7 @@ export function Payment() {
     if (paymentCompleted && transactionData && transactionData.status === 'pending' && hash) {
       const fetchTransactionDetails = async () => {
         try {
-          const response = await axiosAPI.getTransactionDetails(hash);
+          const response = await axiosUserAPI.getTransactionDetails(hash);
           
           if (response.data.success) {
             setTransaction(response.data.transaction);
@@ -323,7 +323,7 @@ export function Payment() {
         try {
           
           // Registrar siempre una nueva transacción para tokens no ETH
-          const registerResponse = await axiosAPI.registerTransaction({
+          const registerResponse = await axiosUserAPI.registerTransaction({
             wallet_address: address!,
             amount: pendingTx.amount,
             token: pendingTx.token
@@ -372,7 +372,7 @@ export function Payment() {
 
       if (token === "ETH") {
         // Para ETH, registramos la transacción primero
-        const registerResponse = await axiosAPI.registerTransaction({
+        const registerResponse = await axiosUserAPI.registerTransaction({
           wallet_address: address,
           amount,
           token
@@ -433,15 +433,14 @@ export function Payment() {
     return (
       <Box p={5} mt={5} mb={5}>
         <VStack spaceY={8} align="center">
-          <Text alignContent={"center"} color="red.500" fontSize="lg">
-            Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain.
-            Hasta que no se confirmen o se eliminen, no podrás hacer otra compra.
+          <Text textAlign={"center"} color="red.500" fontSize="lg">
+            Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain. <br />
+            Si no se confirman en los próximos minutos, contacte con la empresa. Mientras tanto no podrá realizar nuevas compras.
           </Text>
           <Button 
             colorPalette="blue" 
             onClick={() => navigate("/payments-history")}
             mt={4}
-            width="full"
           >
             Historial de Compras
           </Button>

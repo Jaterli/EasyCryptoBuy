@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toaster } from "@/shared/components/ui/toaster";
-import { authUserAPI } from "@/features/user/services/userApi";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
+import { axiosUserAPI } from "@/features/user/services/userApi";
 
 interface FormData {
   name: string;
@@ -23,13 +23,13 @@ export function useRegisterWallet() {
     }
 
     try {
-      const response = await authUserAPI.registerWallet({
+      const response = await axiosUserAPI.registerWallet({
         wallet_address: address,
         name: formData.name,
         email: formData.email,
       });
 
-      if (response.data.success) {
+      if (response.success) {
         // Autenticar automáticamente después del registro
         const authResult = await authenticate();
         
@@ -47,17 +47,17 @@ export function useRegisterWallet() {
       } else {
         toaster.create({
           title: "Registro fallido",
-          description: response.data.message || "Error desconocido",
+          description: response.error || "Error desconocido",
           type: "error",
           duration: 4000,
         });
         return { success: false };
       }
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Error desconocido";
+    } catch (err) {    
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
       toaster.create({
         title: "Error en registro",
-        description: message,
+        description: errorMessage,
         type: "error",
         duration: 4000,
       });

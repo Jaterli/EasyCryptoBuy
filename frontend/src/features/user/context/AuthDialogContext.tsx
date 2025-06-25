@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from "react";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import { Dialog, useDisclosure, Text, Button } from "@chakra-ui/react";
 import { useWalletAuth } from "../auth/WalletAuthService";
 
@@ -37,10 +37,10 @@ export const AuthDialogProvider = ({ children }: { children: React.ReactNode }) 
     onClose();
     authPromise(result.success);
     setAuthPromise(null);
-    if (result.success) {
-      // window.location.reload(); // refrescar componente/página
-      // setIsAuthenticated(true);
-    }
+    // if (result.success) {
+    //   window.location.reload(); // refrescar componente/página
+    //   setIsAuthenticated(true);
+    // }
 
 };
 

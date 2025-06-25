@@ -1,4 +1,4 @@
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Spinner, VStack, Text, Button } from "@chakra-ui/react";
