@@ -1,6 +1,12 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { API_PATHS } from '@/config/paths';
 
+interface RefreshResponse {
+  success: boolean;
+  newToken?: string;
+  error?: string;
+}
+
 // Extendemos la interfaz para añadir propiedad _retry
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
@@ -19,11 +25,10 @@ const userApi: AxiosInstance = axios.create({
 /**
  * Intenta refrescar el token de acceso usando el refresh token
  */
-async function refreshUserToken(): Promise<string | null> {
+async function refreshUserToken(): Promise<RefreshResponse> {
   const refreshToken = localStorage.getItem('userRefreshToken');
   if (!refreshToken){
-    console.error('No se ha encontrado el token de refresco.');
-    return null;
+    return {"success": false, "error": "No se ha encontrado el token de refresco."};
   }
   try {
     const response = await userApi.post(`${API_PATHS.users}/token/refresh/`, {
@@ -32,13 +37,12 @@ async function refreshUserToken(): Promise<string | null> {
     
     const newAccessToken = response.data.access;
     localStorage.setItem('userToken', newAccessToken);
-    return newAccessToken;
+    return {"success": true, "newToken": newAccessToken};
   } catch (error) {
-    console.error('Error refreshing token:', error);
     localStorage.removeItem('userToken');
     localStorage.removeItem('userRefreshToken');
     window.location.reload();
-    return null;
+    return {"success": false, "error": "Error refreshing token: "+error};
   }
 }
 
@@ -66,10 +70,12 @@ userApi.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const newToken = await refreshUserToken();
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const response = await refreshUserToken();
+        if (response.success) {
+          originalRequest.headers.Authorization = `Bearer ${response.newToken}`;
           return userApi(originalRequest);
+        } else {
+          console.error(response.error);
         }
       } catch (refreshError) {
         console.error('Refresh token failed:', refreshError);

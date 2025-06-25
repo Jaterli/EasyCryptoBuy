@@ -14,7 +14,7 @@ import {
   Menu,
   Text,
 } from "@chakra-ui/react";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import { useConnect } from "wagmi";
 import { ColorModeButton } from "@/shared/components/ui/color-mode";
 import { NavLink } from "react-router-dom";
@@ -33,8 +33,8 @@ export function Navbar() {
     if (connectors.length > 0) {
       try {
         await connectAsync({ connector: connectors[0] });
-      } catch (error) {
-        console.error("Error al conectar la wallet:", error);
+      } catch (err) {
+        console.error("Error al conectar la wallet:", err);
       }
     }
   };
@@ -158,6 +158,7 @@ export function Navbar() {
                   {isConnected && (
                     <>
                       <NavButton to="/payments-history">Historial de Compras</NavButton>
+                      <NavButton to="/profile">Perfil</NavButton>
                     </>
                   )}
                   <NavButton to="/cart-sumary">
@@ -193,6 +194,7 @@ export function Navbar() {
       {isConnected && (
         <>
           <NavButton to="/payments-history">Historial de Compras</NavButton>
+          <NavButton to="/profile">Perfil</NavButton>
         </>
       )}
       <NavLink to="/cart-sumary">

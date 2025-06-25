@@ -8,40 +8,30 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
 import { authUserAPI } from "../services/userApi";
-import { useWallet } from "@/shared/context/useWallet";
-import { useAuthDialog } from "../context/AuthDialogContext";
-
-interface Transaction {
-  transaction_hash: string;
-  amount: string;
-  created_at: string;
-  token: string;
-  status: string;
-}
+import { useWallet } from "@/features/user/hooks/useWallet";
+import { Transaction } from "@/shared/types/types";
+import { useWalletAuth } from "../auth/WalletAuthService";
 
 export default function Home() {
   const { address, isConnected, isAuthenticated, setIsAuthenticated } = useWallet();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  const { requireAuth } = useAuthDialog();
+  const { authenticateWallet } = useWalletAuth();
+
+  const handleSign = async () => {
+    if (address){
+      const result = await authenticateWallet(address);
+      setLoading(false);
+      if(result.success){
+        setIsAuthenticated(true);
+      }    
+    }
+  };
 
   useEffect(() => {
-    if (address) {
+    if (address && isAuthenticated) {
       setLoading(true);
-      
-      if (!isAuthenticated) {
-        const autoAuth = async () => {    
-          const success = await requireAuth();
-          if (!success) {
-            console.warn("El usuario canceló la autenticación.");
-          }else{
-            setIsAuthenticated(true);
-          }                  
-        };
-        autoAuth();
-      }
-      
       authUserAPI.getUserTransactions(address)
         .then(response => {
           setTransactions(response.data.transactions);
@@ -53,13 +43,12 @@ export default function Home() {
           setLoading(false);
         });
     }
-  }, [address, isAuthenticated, requireAuth, setIsAuthenticated]);
+  }, [address, isAuthenticated]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toaster.create({ title: "Dirección copiada", type: "success", duration: 2000});    
   };
-
 
   const getStatusColor = (status: string) => {
       switch (status.toLowerCase()) {
@@ -73,7 +62,6 @@ export default function Home() {
               return 'gray';
       }
   };
-
 
   return (
     <Box p={{ base: 4, md: 8 }} maxW="1200px" mx="auto">
@@ -187,11 +175,21 @@ export default function Home() {
               </HStack>
             </CardHeader>
             <CardBody>
-              {loading ? (
+
+              {!isAuthenticated ? (
+                <Box textAlign="center" py={2} spaceY={4}>
+                  <Text color="gray.500">Necesitas firmar con tu wallet para ver esta sección.</Text>
+                    <Button colorPalette="blue" onClick={handleSign}>
+                      Firmar y continuar
+                    </Button>                  
+                </Box>
+
+              ) : loading ? (
                 <Stack align="center" py={10}>
                   <Spinner size="xl" />
                   <Text>Cargando transacciones...</Text>
                 </Stack>
+
               ) : transactions.length > 0 ? (
                 <Stack spaceY={4}>
                   {transactions
@@ -252,14 +250,13 @@ export default function Home() {
                         </CardBody>
                       </Card.Root>
                     ))}
-                </Stack>
-              ) : !isAuthenticated ? (
-                <Text>Necesitas autenticarte para ver las transacciones.</Text>
+                  </Stack>
               ) : (
-                <Box textAlign="center" py={10}>
+                <Box textAlign="center" py={6}>
                   <Text color="gray.500">No se encontraron transacciones.</Text>
                 </Box>
-              )}
+             )
+            }
             </CardBody>
           </Card.Root>
         )}

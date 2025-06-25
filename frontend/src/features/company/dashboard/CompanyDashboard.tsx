@@ -1,58 +1,70 @@
-import { Box, Flex } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
+import { Box, Flex, Spinner, Center, Text } from '@chakra-ui/react';
 import { KpiCards } from './KpiCards';
 import { TransactionChart } from './TransactionChart';
 import { TopProducts } from './TopProducts';
 import { RecentTransactions } from './RecentTransactions';
+import { authCompanyAPI } from '../services/companyApi';
+import { DashboardDataType } from '@/shared/types/types';
 
 export function CompanyDashboard() {
-  // Datos de ejemplo - en la implementación real estos vendrían de tu API
-  const dashboardData = {
-    totalRevenue: 125000.75,
-    activeUsers: 342,
-    totalTransactions: 1289,
-    inventoryValue: 87500,
-    transactionData: [
-      { date: '01/05', amount: 4200 },
-      { date: '02/05', amount: 3800 },
-      { date: '03/05', amount: 5400 },
-      { date: '04/05', amount: 6200 },
-      { date: '05/05', amount: 5800 },
-    ],
-    topProducts: [
-      { id: 1, name: 'Producto Premium', sales: 245, revenue: 12250 },
-      { id: 2, name: 'Kit Inicial', sales: 189, revenue: 9450 },
-      { id: 3, name: 'Servicio Plus', sales: 132, revenue: 6600 },
-    ],
-    recentTransactions: [
-      {
-        id: 1,
-        wallet_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
-        amount: 125.5,
-        status: 'confirmed',
-        created_at: '2023-05-05T14:32:00Z',
-        token: 'USDT'
-      },
-      // Más transacciones...
-    ]
-  };
+  const [dashboardData, setDashboardData] = useState<DashboardDataType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await authCompanyAPI.getCompanyDashboard();
+        setDashboardData(response);
+      } catch (err) {
+        console.error("Error cargando el dashboard:", err);
+        setError("Error al cargar los datos del dashboard.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Center minH="300px">
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
+
+  if (error) {
+    return (
+      <Center minH="300px">
+        <Text color="red.500">{error}</Text>
+      </Center>
+    );
+  }
+
+if (!dashboardData){
+  return ""
+}
 
   return (
     <Box p={{ base: 3, md: 5 }}>
       <KpiCards 
-        totalRevenue={dashboardData.totalRevenue}
-        activeUsers={dashboardData.activeUsers}
-        totalTransactions={dashboardData.totalTransactions}
-        inventoryValue={dashboardData.inventoryValue}
+        totalRevenue={dashboardData.total_revenue}
+        activeUsers={dashboardData.active_users}
+        totalTransactions={dashboardData.total_transactions}
+        inventoryValue={dashboardData.inventory_value}
       />
       
-      <TransactionChart data={dashboardData.transactionData} />
+      <TransactionChart data={dashboardData.transaction_trend} />
       
       <Flex gap={4} mt={4}>
         <Box flex={2}>
-          <TopProducts products={dashboardData.topProducts} />
+          <TopProducts products={dashboardData.top_products} />
         </Box>
         <Box flex={3}>
-          <RecentTransactions transactions={dashboardData.recentTransactions} />
+          <RecentTransactions transactions={dashboardData.recent_transactions} />
         </Box>
       </Flex>
     </Box>

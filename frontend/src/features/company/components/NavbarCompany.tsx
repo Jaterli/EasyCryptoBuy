@@ -55,6 +55,8 @@ export function NavbarCompany() {
                 <>
                     <NavButton to="/company/products">Productos</NavButton>
                     <NavButton to="/company/sales">Ventas</NavButton>
+                    <NavButton to="/company/orders">Órdenes</NavButton>                    
+                    <NavButton to="/company/users">Usuarios</NavButton>
                 </>
             )}
             <ColorModeButton marginLeft={2} />
@@ -109,7 +111,7 @@ export function NavbarCompany() {
         >
             <Flex align="center">
                 <Box fontSize="xl" fontWeight="bold">
-                    <NavLink to={username ? "/company/" : "/"}>
+                    <NavLink to={username ? "/company/" : "/company/"}>
                         EasyCryptoBuy Admin
                     </NavLink>
                 </Box>
@@ -160,6 +162,8 @@ export function NavbarCompany() {
                                                     <>
                                                         <NavButton to="/company/products">Productos</NavButton>
                                                         <NavButton to="/company/sales">Ventas</NavButton>
+                                                        <NavButton to="/company/orders">Órdenes</NavButton>                                                        
+                                                        <NavButton to="/company/users">Usuarios</NavButton>
                                                         <Button 
                                                             w="full" 
                                                             colorPalette="red" 

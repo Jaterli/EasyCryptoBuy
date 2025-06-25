@@ -1,5 +1,5 @@
 import { Button, Text, Box, Spinner, Flex } from "@chakra-ui/react";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 import UserForm from "./UserForm";
 
 export function ConnectWallet() {

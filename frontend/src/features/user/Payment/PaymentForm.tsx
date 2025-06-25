@@ -15,7 +15,7 @@ import { useTokenPrices } from "@/shared/hooks/useTokenPrices";
 import { useCart } from "@/features/user/context/CartContext";
 import { toaster } from "@/shared/components/ui/toaster";
 import { GrTransaction } from "react-icons/gr";
-import { useWallet } from "@/shared/context/useWallet";
+import { useWallet } from "@/features/user/hooks/useWallet";
 
 type Token = "USDT" | "USDC" | "ETH" | "LINK";
 

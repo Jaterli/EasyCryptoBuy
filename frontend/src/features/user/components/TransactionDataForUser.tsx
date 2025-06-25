@@ -17,7 +17,7 @@ import {
 import { toaster } from "@/shared/components/ui/toaster";
 import { FaCopy, FaFileInvoice, FaChevronDown, FaChevronUp, FaShoppingCart } from 'react-icons/fa';
 import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
-import { Transaction, OrderItem, ApiError } from '@/shared/types/types';
+import { Transaction, OrderItem } from '@/shared/types/types';
 import { API_PATHS } from '@/config/paths';
 import { authUserAPI } from '../services/userApi';
 
@@ -38,17 +38,19 @@ export default function TransactionData({ tx }: TransactionDataProps) {
 
         if (!expandedCards[id]) {
             setLoading(true);
-            try {
-                const res = await authUserAPI.getTransactionOrderItems(id);
-                setOrderItems(res.data);
-            } catch (error) {    
-                const apiError = error as ApiError;
-                const errorMessage = apiError.response ? apiError.response.data.message : error;
-                console.error("Error al cargar detalles de la compra. ", errorMessage);                 
-                toaster.create({ title: "Error al cargar detalles de la compra. "+errorMessage, type: "error" });
-            } finally {
+            authUserAPI.getTransactionOrderItems(id)
+            .then(response => {
+                if (response.success && response.data) {
+                    setOrderItems(response.data);
+                    console.log(response.data);
+                } else {
+                    console.error("Error al cargar detalles de la compra. ", response.error);                 
+                    toaster.create({ title: "Error al cargar detalles de la compra. "+response.error, type: "error" });
+                }
+            })
+            .finally(() => {
                 setLoading(false);
-            }
+            });
         }
     };
 
@@ -71,7 +73,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
     };
 
     const handleDownloadInvoice = (transactionId: number) => {
-        window.open(`${API_PATHS.payments}/generate-invoice/${transactionId}/`, '_blank');
+        window.open(`${API_PATHS.payments}/generate-invoice/${transactionId}`, '_blank');
     };
 
     const getSummary = () => {

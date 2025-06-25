@@ -2,11 +2,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card, Heading, Box } from '@chakra-ui/react';
 
 export function TransactionChart({ data }: { data: Array<{date: string, amount: number}> }) {
+  
   return (
     <Card.Root p={4} mt={4}>
-        <Card.Header>
-            <Heading size="md" mb={4}>Transacciones Recientes</Heading>            
-        </Card.Header>
+      <Heading size="md" mb={4}>Transacciones Recientes</Heading>            
       
       <Box height="300px">
         <ResponsiveContainer width="100%" height="100%">

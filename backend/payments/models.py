@@ -35,8 +35,11 @@ class Cart(models.Model):
         related_name='cart'
     )
 
+    def __str__(self):
+        return f"Cart #{self.id} for {self.user.user.username}"
+    
     def clear_items(self):
-        self.items.all().delete()
+        self.cart_items.all().delete()
 
     class Meta:
         # Constraints para asegurar que solo un carrito activo por usuario
@@ -50,16 +53,27 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_items')
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     price_at_sale = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
+    
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} (Cart #{self.cart.id})"
+    
     class Meta:
         unique_together = ('cart', 'product')    
+        verbose_name = 'Cart Item'
+        verbose_name_plural = 'Cart Items'
 
 
 class OrderItem(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'pendiente'),
+        ('processed', 'tramitado'),
+        ('shipped', 'enviado'),
+    ]
+
     transaction = models.ForeignKey(
         'Transaction', 
         on_delete=models.CASCADE,
@@ -72,6 +86,14 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     price_at_sale = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    def __str__(self):
+        return f"Order: {self.quantity} x {self.product.name} @ {self.price_at_sale}"
 
     @property
     def subtotal(self):

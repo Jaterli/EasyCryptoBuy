@@ -33,15 +33,20 @@ export const useWalletAuth = () => {
       });
 
       // 4. Guardar tokens
-      const { access_token, refresh_token } = authResponse.data;
-      localStorage.setItem('userToken', access_token);
-      localStorage.setItem('userRefreshToken', refresh_token);
-      return { success: true };
+      const { data } = authResponse;
       
+      if (data.success){
+        localStorage.setItem('userToken', data.access_token);
+        localStorage.setItem('userRefreshToken', data.refresh_token);
+        return {success: true}
+      } else {
+        return {success: false, error: data.error};
+      }
+
     } catch (error) {
       console.error("Authentication error:", error);
       toaster.create({
-        title: "Error de autenticación",
+        title: "Error en la autenticación",
         description: "No se pudo completar la autenticación con la wallet",
         type: "error",
         duration: 4000

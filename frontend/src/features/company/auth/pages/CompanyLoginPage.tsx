@@ -33,7 +33,7 @@ const CompanyLoginPage: React.FC = () => {
           description: "Bienvenido al panel de administración",
           duration: 3000,
         });
-        navigate("/company/products");
+        navigate("/company/");
       } else {
         throw new Error("Usuario no autorizado");
       }

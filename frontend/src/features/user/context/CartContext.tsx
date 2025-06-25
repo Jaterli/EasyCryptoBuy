@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { ApiCartItem, CartContextType, CartItem, Product } from "@/shared/types/types";
-import { useWallet } from "@/shared/context/useWallet";
-import { axiosAPI } from "../services/userApi";
+import { useWallet } from "@/features/user/hooks/useWallet";
+import { axiosUserAPI } from "../services/userApi";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -21,7 +21,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       console.log("Comprobando si hay transacciones pendientes...");
-      const { data } = await axiosAPI.checkPendingTransactions(address);
+      const { data } = await axiosUserAPI.checkPendingTransactions(address);
       
       if (data.success) {
         return data.transactions || [];
@@ -63,14 +63,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
      (async function () {
       const payload = {
         wallet: address,
-        items: cart.map((item: CartItem) => ({
-          product_id: item.product.id,
-          quantity: item.quantity
+        cart_items: cart.map((cart_item: CartItem) => ({
+          product_id: cart_item.product.id,
+          quantity: cart_item.quantity
         }))
       };
 
+      console.log("Intentando guardar carrito...");
       try {
-        await axiosAPI.saveCart(payload);
+        await axiosUserAPI.saveCart(payload);
       } catch (error) {
         console.error("Error sincronizando carrito:", error);
       }
@@ -84,13 +85,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (cartError || !await verifyBeforeCartOperation()) return;
 
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const existing = prev.find(cart_item => cart_item.product.id === product.id);
       if (existing) {
         if (existing.quantity < product.quantity) {
-          return prev.map(item =>
-            item.product.id === product.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
+          return prev.map(cart_item =>
+            cart_item.product.id === product.id
+              ? { ...cart_item, quantity: cart_item.quantity + 1 }
+              : cart_item
           );
         } else {
           alert("Has alcanzado el máximo disponible de este producto");
@@ -103,7 +104,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = async (id: string) => {
     if (cartError || !await verifyBeforeCartOperation()) return;
-    setCart(prev => prev.filter(item => item.product.id !== id));
+    const updatedCart = cart.filter(cart_item => cart_item.product.id !== id);
+    if (updatedCart.length > 0){
+      setCart(updatedCart);    
+    } else {
+      clearCart();
+    }
   };
 
   const clearCart = async () => {
@@ -111,38 +117,103 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!await verifyBeforeCartOperation()) return;
 
     try {
-      await axiosAPI.clearCart(address);
+      await axiosUserAPI.clearCart(address);
       setCart([]);
+      console.log("Carrito limpiado.");
     } catch (err) {
       console.error("Error limpiando carrito en backend:", err);
     }
   };
 
+  useEffect(() => {
+    if (!isWalletRegistered || !address) {
+      localStorage.setItem("guest_cart", JSON.stringify(cart));
+    }
+  }, [cart, isWalletRegistered, address]);
+
+  // useEffect(() => {
+  //   const syncCartWithBackend = async () => {
+  //     if (!address || !isWalletRegistered) return;
+
+  //     // Si existe carrito local y no hay carrito cargado aún desde backend
+  //     const guestCartString = localStorage.getItem("guest_cart");
+  //     if (guestCartString) {
+  //       try {
+  //         const guestCart: CartItem[] = JSON.parse(guestCartString);
+  //         if (guestCart.length > 0) {
+  //           setCart(guestCart); // actualizamos el estado local
+  //           // Luego sincronizamos con el backend
+  //           const payload = {
+  //             wallet: address,
+  //             cart_items: guestCart.map((cart_item: CartItem) => ({
+  //               product_id: cart_item.product.id,
+  //               quantity: cart_item.quantity
+  //             }))
+  //           };
+  //           await axiosUserAPI.saveCart(payload);
+  //           localStorage.removeItem("guest_cart");
+  //         }
+  //       } catch (e) {
+  //         console.error("Error sincronizando carrito de invitado:", e);
+  //       }
+  //     }
+  //   };
+
+  //   syncCartWithBackend();
+  // }, [address, isWalletRegistered]);
+
   // Función para cargar el carrito desde el backend
   useEffect(() => {
     const loadCart = async () => {
       if (!address || !isWalletRegistered) return;
-      
+
+      console.log("Cargando carrito...")
+      // Si existe carrito local y no hay carrito cargado aún desde backend
+      const guestCartString = localStorage.getItem("guest_cart");
+      if (guestCartString) {
+        try {
+          const guestCart: CartItem[] = JSON.parse(guestCartString);
+          if (guestCart.length > 0) {
+            setCart(guestCart); // actualizamos el estado local
+            // Luego sincronizamos con el backend
+            const payload = {
+              wallet: address,
+              cart_items: guestCart.map((cart_item: CartItem) => ({
+                product_id: cart_item.product.id,
+                quantity: cart_item.quantity
+              }))
+            };
+            await axiosUserAPI.saveCart(payload);
+            localStorage.removeItem("guest_cart");
+          }
+        } catch (e) {
+          console.error("Error sincronizando carrito de invitado:", e);
+        }
+      }
+
+
       setCartLoading(true);
       setCartError(false);
       try {
-        const { data } = await axiosAPI.getCart(address);
+        const { data } = await axiosUserAPI.getCart(address);
 
-        if (Array.isArray(data?.items)) {
-          const restored = data.items.map((item: ApiCartItem) => ({
+        if (Array.isArray(data?.cart_items)) {
+          const restored = data.cart_items.map((cart_item: ApiCartItem) => ({
             product: {
-              id: item.product_id,
-              name: item.product_name,
-              description: item.product_description,
-              amount_usd: item.product_price
+              id: cart_item.product_id,
+              name: cart_item.product_name,
+              description: cart_item.product_description,
+              amount_usd: cart_item.product_price
             },
-            quantity: item.quantity
+            quantity: cart_item.quantity
           }));
+          console.log("Carrito cargado.");
           setCart(restored);
         } else {
+          console.log("Carrito vacío.");
           setCart([]);
           if (data.error) {
-            console.error("Error loading cart:", data.error);
+            console.error("Error cargando carrito:", data.error);
             setCartError(true);
           }
         }

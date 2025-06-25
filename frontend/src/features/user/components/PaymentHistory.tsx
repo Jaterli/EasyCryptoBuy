@@ -11,11 +11,9 @@ import {
 } from '@chakra-ui/react';
 import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
-import TransactionData from "../components/TransactionData";
+import TransactionData from "./TransactionDataForUser";
 import { authUserAPI } from '../services/userApi';
-import { useWallet } from '@/shared/context/useWallet';
-import { useAuthDialog } from '../context/AuthDialogContext';
-
+import { useWallet } from '@/features/user/hooks/useWallet';
 
 const itemsPerPageOptions = createListCollection({
   items: [
@@ -30,24 +28,10 @@ export function PaymentHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const { address, isAuthenticated, setIsAuthenticated } = useWallet();
-  const { requireAuth } = useAuthDialog();
+  const { address } = useWallet();
    
   useEffect(() => {
     if (address) {
-
-      if (!isAuthenticated) {
-        const autoAuth = async () => {    
-          const success = await requireAuth();
-          if (!success) {
-            console.warn("El usuario canceló la autenticación.");
-            // Opcional: redireccionar a login o mostrar advertencia
-          }else{
-            setIsAuthenticated(true);
-          }                  
-        };
-        autoAuth();
-      }
 
       setIsLoading(true);
       authUserAPI.getUserTransactions(address)
@@ -62,7 +46,7 @@ export function PaymentHistory() {
         setIsLoading(false);
       });
     }
-  }, [address, isAuthenticated, requireAuth, setIsAuthenticated]);
+  }, [address]);
 
 
   // Calcular transacciones para la página actual
@@ -83,9 +67,7 @@ export function PaymentHistory() {
         Historial de Pagos de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}
       </Flex>
       
-      {!isAuthenticated ? (
-        <Text>Necesitas autenticarte para ver las transacciones.</Text>
-      ) : isLoading ? (
+      {isLoading ? (
         <Text>Cargando transacciones...</Text>
       ) : transactions.length === 0 ? (
         <Text>No se encontraron transacciones.</Text>

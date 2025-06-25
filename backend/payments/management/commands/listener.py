@@ -120,7 +120,7 @@ class Command(BaseCommand):
                 logger.info(f"Carrito encontrado.")
                 # 1. Crear OrderItems para historial
                 cart_items = await sync_to_async(
-                    lambda: list(cart.items.all().select_related('product'))
+                    lambda: list(cart.cart_items.all().select_related('product'))
                 )()
 
                 for item in cart_items:
