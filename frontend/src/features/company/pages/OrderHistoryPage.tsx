@@ -5,16 +5,24 @@ import {
   Text, 
   IconButton, 
   Portal,
-  Stack,
   Heading,
   Spinner,
   Select,
   Alert,
-  Badge
+  Table
 } from '@chakra-ui/react';
 import { createListCollection } from '@ark-ui/react';
 import { authCompanyAPI } from '../services/companyApi';
 import { OrderItem } from '@/shared/types/types';
+import { toaster } from "@/shared/components/ui/toaster";
+
+const statusOptions = createListCollection({
+  items: [
+    { label: "Pendiente", value: "pending" },
+    { label: "Tramitado", value: "processed" },
+    { label: "Enviado", value: "shipped" },
+  ],
+});
 
 const itemsPerPageOptions = createListCollection({
   items: [
@@ -25,8 +33,8 @@ const itemsPerPageOptions = createListCollection({
 });
 
 const statusColors = {
-  pending: 'yellow',
-  processed: 'blue',
+  pending: 'yellow.600',
+  processed: 'blue.400',
   shipped: 'green'
 };
 
@@ -37,38 +45,49 @@ export function OrderHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
+  
+  const loadOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await authCompanyAPI.getAllOrders();
+      if (response.success && response.data) {
+        // Ordenar por fecha (más reciente primero)
+        const sortedOrders = [...response.data].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setOrders(sortedOrders);
+      } else {
+        setError(response.error || "Error desconocido al cargar órdenes");
+        setOrders([]);
+      }
+    } catch (err) {
+      let errorMessage = "Ocurrió un error al cargar las órdenes";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Cargar todas las órdenes al montar el componente
   useEffect(() => {
-    const loadOrders = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const response = await authCompanyAPI.getAllOrders();
-        if (response.success && response.data) {
-          // Ordenar por fecha (más reciente primero)
-          const sortedOrders = [...response.data].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          setOrders(sortedOrders);
-        } else {
-          setError(response.error || "Error desconocido al cargar órdenes");
-          setOrders([]);
-        }
-      } catch (err) {
-        let errorMessage = "Ocurrió un error al cargar las órdenes";
-        if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-        setError(errorMessage);
-        setOrders([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadOrders();
   }, []);
+
+  const handleStatusChange = async (orderItemId: number, newStatus: string) => {
+    try {
+      const response = await authCompanyAPI.updateOrderItemStatus(orderItemId, newStatus);
+      toaster.create({ title: response.message, type: "success" });
+      loadOrders(); // recargar el estado actualizado
+    } catch (err) {
+      toaster.create({ title: `${err}`, type: "error", duration: 3000 });
+    }
+  };
 
   // Calcular órdenes para la página actual
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -161,45 +180,62 @@ export function OrderHistoryPage() {
         </Alert.Root>
       ) : (
         <>
-          <Stack gap={4} mb={6}>
-            {currentOrders.map((order) => (
-              <Box 
-                key={order.id} 
-                p={4} 
-                borderWidth="1px" 
-                borderRadius="md"
-                bg={{ _dark: "gray.700", base: "white" }}
-              >
-                <Flex justify="space-between" mb={2}>
-                  <Text fontWeight="bold">Orden #{order.id}</Text>
-                  <Text fontSize="sm" color="gray.500">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </Text>
-                </Flex>
-                
-                <Flex direction="column" gap={2}>
-                  <Text>
-                    Producto: {order.product.name} (x{order.quantity})
-                  </Text>
-                  <Text>
-                    Precio unitario: ${order.price_at_sale}
-                  </Text>
-                  <Text fontWeight="bold">
-                    Total: ${order.subtotal}
-                  </Text>
-                  <Flex align="center" gap={2}>
-                    <Text>Estado:</Text>
-                    <Badge colorScheme={statusColors[order.status as keyof typeof statusColors]}>
-                      {order.status}
-                    </Badge>
-                  </Flex>
-                  <Text fontSize="sm" color="gray.500">
-                    Transacción: {order.transaction.transaction_hash}
-                  </Text>
-                </Flex>
-              </Box>
-            ))}
-          </Stack>
+            <Table.Root variant="outline" size="sm">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader>Producto</Table.ColumnHeader>
+                  <Table.ColumnHeader>Tx</Table.ColumnHeader>                  
+                  <Table.ColumnHeader>Cantidad</Table.ColumnHeader>
+                  <Table.ColumnHeader>Precio</Table.ColumnHeader>
+                  <Table.ColumnHeader>Subtotal</Table.ColumnHeader>
+                  <Table.ColumnHeader>Estado</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+
+              {currentOrders.map((order) => (
+
+                <Table.Row key={order.id}>
+                  <Table.Cell>{order.product.name}</Table.Cell>
+                  <Table.Cell>0x...{order.transaction.transaction_hash.substring(order.transaction.transaction_hash.length-10)}</Table.Cell>                  
+                  <Table.Cell>{order.quantity}</Table.Cell>
+                  <Table.Cell>${order.price_at_sale}</Table.Cell>
+                  <Table.Cell>${(Number(order.price_at_sale) * order.quantity).toFixed(2)}</Table.Cell>
+                  <Table.Cell>
+                    <Select.Root color={statusColors[order.status as keyof typeof statusColors]}
+                      collection={statusOptions}
+                      value={[order.status || "pendiente"]}
+                      onValueChange={({ value }) => handleStatusChange(order.id, value[0])}
+                      size="sm"
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder="Estado" />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {statusOptions.items.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+
+              </Table.Body>
+            </Table.Root>
 
           {/* Controles de paginación inferior */}
           <Flex justifyContent="center" mt={6}>

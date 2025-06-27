@@ -62,7 +62,7 @@ class Command(BaseCommand):
             event = contract.events.PaymentReceived().process_log(log)
             id = event['args']['transactionId']
             sender_address = event['args']['sender'].lower()
-            tx_hash = "0x" + log['transactionHash'].hex()
+            tx_hash = log['transactionHash'].hex()
 
             logger.info(f"Evento recibido: TX Hash {tx_hash}, Transaction ID {id}, Sender {sender_address}")
 

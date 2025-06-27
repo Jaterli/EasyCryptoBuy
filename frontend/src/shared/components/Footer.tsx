@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <Box as="footer" py={5} mt={10} minW="100%" position="absolute" bottom="0" bg={{ _dark: "blue.900", base: "blue.100" }} textAlign="center">
       <Text fontSize="sm">
-        © {new Date().getFullYear()} Blockchain Payments. Todos los derechos reservados.
+        © {new Date().getFullYear()} EasyCryptoBuy. Todos los derechos reservados.
       </Text>
     </Box>
   )

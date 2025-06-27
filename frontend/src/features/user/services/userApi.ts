@@ -1,7 +1,7 @@
 import { API_PATHS } from '@/config/paths';
 import axios from 'axios';
 import { authUserAxios } from '../auth/authUserAxios';
-import { ApiResponse, OrderItem, UserProfile } from '@/shared/types/types';
+import { ApiResponse, UserProfile, OrderItem } from '@/shared/types/types';
 
 
 // Función auxiliar para manejar errores de API
@@ -38,9 +38,7 @@ function handleApiError<T>(error: unknown): ApiResponse<T> {
 }
 
 export const authUserAPI = {
-
-
-  
+ 
   getNonce: (wallet: string) => 
     axios.get(`${API_PATHS.users}/get-wallet-nonce/${wallet}`),
 
@@ -52,8 +50,8 @@ export const authUserAPI = {
   }) => axios.post(`${API_PATHS.users}/wallet-auth`, payload),
   
 
-  getUserTransactions: (wallet: string) =>
-    authUserAxios.get(`${API_PATHS.payments}/get-user-transactions/${wallet}`),
+  getTransactionsByWallet: (wallet: string) =>
+    authUserAxios.get(`${API_PATHS.payments}/get-transactions-by-wallet/${wallet}`),
 
 
   getTransactionOrderItems: async (id: number): Promise<ApiResponse<OrderItem[]>> => {
@@ -129,9 +127,18 @@ export const axiosUserAPI = {
   updateTransaction: (id: number, payload: unknown) => 
     authUserAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, payload),
   
-  getTransactionDetails: (hash: `0x${string}` | undefined) => 
-    authUserAxios.get(`${API_PATHS.payments}/get-transaction-by-hash/${hash}`),
+  // getTransactionDetail: (hash: string) => 
+  //   authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`),
   
+  // getTransactionDetail: async (hash: string) => {
+  //   return await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`)
+  //   .then(response => response.data)
+  //   .catch(err => {
+  //     throw new Error (err.response.data.error);
+  //   })
+  // },
+
+
   deleteTransaction: (id: number) => 
     authUserAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),
 

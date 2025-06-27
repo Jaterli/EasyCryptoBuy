@@ -14,7 +14,14 @@ import { useParams } from "react-router-dom";
 import { authCompanyAPI } from "../services/companyApi";
 import { Transaction } from "@/shared/types/types";
 import { createListCollection, Portal } from "@ark-ui/react";
+import { CheckTransactions } from "@/features/company/components/CheckTransactions";
 import { useNavigate } from 'react-router-dom';
+
+const statusColors = {
+  pending: 'yellow.600',
+  processed: 'blue.400',
+  shipped: 'green'
+};
 
 const statusOptions = createListCollection({
   items: [
@@ -81,11 +88,19 @@ export const TransactionDetail: React.FC = () => {
         <Text><strong>Hash:</strong> {transaction.transaction_hash}</Text>
         <Text><strong>Wallet:</strong> {transaction.wallet_address}</Text>
         <Text><strong>Monto:</strong> {transaction.amount} {transaction.token}</Text>
-        <Text><strong>Estado:</strong> {transaction.status}</Text>
         <Text><strong>Fecha:</strong> {new Date(transaction.created_at).toLocaleString()}</Text>
+        {transaction.status === 'pending' ? (
+          <CheckTransactions 
+            transactionHash={transaction.transaction_hash} 
+            onCheckComplete={fetchTransaction} // Pasamos la función como callback
+          />
+          ) : (
+            <Text><strong>Estado:</strong> {transaction.status}</Text>
+          )
+        }
       </Box>
 
-      <Heading size="md" mb={3}>Productos comprados</Heading>
+      <Heading size="md" mb={3}>Órdenes (productos comprados)</Heading>
 
       <Table.Root variant="outline" size="sm">
         <Table.Header>
@@ -105,7 +120,7 @@ export const TransactionDetail: React.FC = () => {
               <Table.Cell>${item.price_at_sale}</Table.Cell>
               <Table.Cell>${(Number(item.price_at_sale) * item.quantity).toFixed(2)}</Table.Cell>
               <Table.Cell>
-                <Select.Root
+                <Select.Root color={statusColors[item.status as keyof typeof statusColors]}
                   collection={statusOptions}
                   value={[item.status || "pendiente"]}
                   onValueChange={({ value }) => handleStatusChange(item.id, value[0])}

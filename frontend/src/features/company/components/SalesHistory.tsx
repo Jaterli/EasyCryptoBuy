@@ -285,10 +285,7 @@ export function SalesHistory() {
                 ))}
               </Table.Body>
             </Table.Root>
-          </Box>
-
-              {/* <TransactionData key={transaction.id} tx={transaction} /> */}
-  
+          </Box>  
 
           {/* Controles de paginación */}
           <Flex justifyContent="space-between" alignItems="center" mt={4}>

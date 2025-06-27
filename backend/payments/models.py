@@ -36,7 +36,7 @@ class Cart(models.Model):
     )
 
     def __str__(self):
-        return f"Cart #{self.id} for {self.user.user.username}"
+        return f"Cart #{self.id} for {self.user.user.username}. Active: {self.is_active}"
     
     def clear_items(self):
         self.cart_items.all().delete()

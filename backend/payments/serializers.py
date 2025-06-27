@@ -52,9 +52,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'quantity', 'price_at_sale', 'status', 'subtotal', 'created_at']
 
 
-class TransactionDetailSerializer(serializers.ModelSerializer):
+class TransactionSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Transaction
-        fields = ['transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items']
+        fields = ('transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items')      
+

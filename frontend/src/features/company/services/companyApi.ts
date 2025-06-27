@@ -106,6 +106,14 @@ export const authCompanyAPI = {
     }
   },
 
+  runCheckPendingTransaction: async (hash: string) => {
+    return await authCompanyAxios.get(`${API_PATHS.company}/run-check_pending-transactions/${hash || ''}`)
+    .then(response => response.data)
+    .catch(err => {
+      throw new Error (err.response.data.error);
+    })
+  },
+
   getUserStats: async (): Promise<ApiResponse<UserStats[]>> => {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-users-transactions-sumary`);

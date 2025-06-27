@@ -7,7 +7,7 @@ import StandardERC20ABI from "@/abis/ERC20.json";
 import { PaymentForm } from "./PaymentForm";
 import { useWallet } from "@/features/user/hooks/useWallet";
 import { useNavigate } from "react-router-dom";
-import TransactionData from "../components/TransactionDataForUser";
+import TransactionData from "../components/TransactionData";
 import { useCart } from "@/features/user/context/CartContext";
 import { ApiError, Transaction } from "@/shared/types/types";
 import { FaCheckCircle } from "react-icons/fa";
