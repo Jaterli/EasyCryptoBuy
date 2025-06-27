@@ -55,9 +55,3 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ('transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items')      
-
-
-# class TransactionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Transaction
-#         fields = '__all__'        

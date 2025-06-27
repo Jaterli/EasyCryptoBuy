@@ -12,7 +12,7 @@ from django.db.models import Sum, Count, F, DecimalField, Max
 from django.db.models.functions import TruncDay
 from django.utils import timezone
 from datetime import timedelta
-
+from payments.management.commands.check_pending_transactions import Command
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -77,7 +77,6 @@ def get_all_users(request):
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def get_transactions_by_wallet(request, wallet_address):
-
     try:
         transactions = Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
 
@@ -297,13 +296,12 @@ def get_user_by_wallet(request, wallet_address):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_transaction_detail(request, transaction_hash):
-
     try:
         transaction = Transaction.objects.get(transaction_hash=transaction_hash)
         serializer = TransactionSerializer(transaction)
         return Response({'data': serializer.data})
     except Transaction.DoesNotExist:
-        return Response({'error': 'Transacción no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': f'Transacción con hash {transaction_hash} no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['PATCH'])
@@ -319,3 +317,40 @@ def update_order_item_status(request, order_item_id):
     order_item.save()
     return Response({'message': 'Estado actualizado'})
 
+
+from payments.management.commands.check_pending_transactions import Command
+import logging
+import asyncio
+
+logger = logging.getLogger(__name__)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def run_check_pending_transactions(request, transaction_hash=None):
+    try:
+        cmd = Command()
+        # Ejecutar handler async desde vista sincrónica
+        result = asyncio.run(cmd.async_handler(transaction_hash=transaction_hash))
+
+        if result.get('success'):
+            return Response({
+                'status': 'success',
+                'message': result.get('message'),
+                'processed': result.get('processed', 0),
+                'confirmed': result.get('confirmed', 0),
+                'failed': result.get('failed', 0)
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'status': 'error',
+                'message': result.get('message'),
+                'error': result.get('error')
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.error(f"Error en run_check_pending_transactions: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': 'Error interno del servidor',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

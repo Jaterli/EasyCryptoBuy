@@ -3,7 +3,7 @@ from django.http import Http404, JsonResponse, HttpResponse
 from .utils.formatters import format_scientific_to_decimal
 from .models import OrderItem, Transaction, Cart
 from reportlab.lib.pagesizes import letter
-from django.shortcuts import get_object_or_404, get_list_or_404
+from django.shortcuts import get_object_or_404
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -14,11 +14,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from users.models import UserProfile
-from .serializers import CartSerializer, OrderItemSerializer
+from .serializers import CartSerializer, OrderItemSerializer, TransactionSerializer
 from django.db import transaction
 from users.decorators import wallet_required
-from eth_account.messages import encode_defunct
-from eth_account import Account
 
 # @api_view(["POST"])
 # @permission_classes([AllowAny])
@@ -298,8 +296,7 @@ def generate_invoice(request, transaction_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_user_transactions(request, wallet_address):
-
+def get_transactions_by_wallet(request, wallet_address):
     try:
         transactions = Transaction.objects.filter(wallet_address=wallet_address).order_by('-created_at')
     except Transaction.DoesNotExist:
@@ -324,28 +321,13 @@ def get_user_transactions(request, wallet_address):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_transaction_by_hash(request, tx_hash):
+def get_transaction_detail(request, transaction_hash):
     try:
-        transaction = Transaction.objects.get(transaction_hash=tx_hash)
+        transaction = Transaction.objects.get(transaction_hash=transaction_hash)
+        serializer = TransactionSerializer(transaction)
+        return Response({'success': True, 'data': serializer.data})
     except Transaction.DoesNotExist:
-        #return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        data = {'success': True, 'message': 'Transaction not found or does not belong to the wallet'}
-        raise Http404("Transaction not found or does not belong to the wallet")
-
-    data = {
-        'transaction':   
-            {
-                'id': transaction.id,
-                'wallet_address': transaction.wallet_address,
-                'amount': transaction.amount,
-                'status': transaction.status,
-                'transaction_hash': transaction.transaction_hash,
-                'created_at': transaction.created_at,
-                'token': transaction.token,
-            },
-        'success': True,
-    }
-    return JsonResponse(data)
+        return Response({'success': False, 'error': f'Transacción con hash {transaction_hash} no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(["GET"])

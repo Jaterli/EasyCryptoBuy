@@ -11,7 +11,7 @@ import {
 } from '@chakra-ui/react';
 import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
-import TransactionData from "./TransactionDataForUser";
+import TransactionData from "./TransactionData";
 import { authUserAPI } from '../services/userApi';
 import { useWallet } from '@/features/user/hooks/useWallet';
 
@@ -34,7 +34,7 @@ export function PaymentHistory() {
     if (address) {
 
       setIsLoading(true);
-      authUserAPI.getUserTransactions(address)
+      authUserAPI.getTransactionsByWallet(address)
       .then(response => {
         setTransactions(response.data.transactions);
         setCurrentPage(1);
