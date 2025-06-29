@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   Text, 
@@ -6,16 +6,29 @@ import {
   Card,
   Collapsible,
   Stack,
-  Badge,
   HStack,
   Icon,
   Heading,
   VStack,
   Spacer,
   Spinner,
+  Flex,
+  Tag
 } from '@chakra-ui/react';
 import { toaster } from "@/shared/components/ui/toaster";
-import { FaCopy, FaFileInvoice, FaChevronDown, FaChevronUp, FaShoppingCart } from 'react-icons/fa';
+import { 
+  FaCopy, 
+  FaFileInvoice, 
+  FaChevronDown, 
+  FaChevronUp, 
+  FaShoppingCart,
+  FaCheckCircle,
+  FaClock,
+  FaTimesCircle,
+  FaTruck,
+  FaLink,
+  FaUnlink
+} from 'react-icons/fa';
 import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal";
 import { Transaction, OrderItem } from '@/shared/types/types';
 import { API_PATHS } from '@/config/paths';
@@ -29,41 +42,108 @@ export default function TransactionData({ tx }: TransactionDataProps) {
     const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({});
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
 
-    const toggleCardExpansion = async (id: number) => {
+    // Cargar orderItems cuando el componente se monta
+    useEffect(() => {
+        if (tx.status === 'confirmed') {
+            setLoading(true);
+            authUserAPI.getTransactionOrderItems(tx.id)
+                .then(response => {
+                    if (response.success && response.data) {
+                        setOrderItems(response.data);
+                    } else {
+                        console.error("Error al cargar detalles de la compra. ", response.error);                 
+                        toaster.create({ 
+                            title: "Error al cargar detalles de la compra. "+response.error, 
+                            type: "error" 
+                        });
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                    setInitialLoad(false);
+                });
+        }
+    }, [tx.id, tx.status]);
+
+    const toggleCardExpansion = (id: number) => {
         setExpandedCards(prev => ({
             ...prev,
             [id]: !prev[id]
         }));
+    };
 
-        if (!expandedCards[id]) {
-            setLoading(true);
-            authUserAPI.getTransactionOrderItems(id)
-            .then(response => {
-                if (response.success && response.data) {
-                    setOrderItems(response.data);
-                    console.log(response.data);
-                } else {
-                    console.error("Error al cargar detalles de la compra. ", response.error);                 
-                    toaster.create({ title: "Error al cargar detalles de la compra. "+response.error, type: "error" });
-                }
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-        }
+    // Determinar el estado del pedido basado en los OrderItems
+    const getOrderStatus = (items: OrderItem[]) => {
+        if (items.length === 0) return 'no-items';
+        
+        const statusCounts = items.reduce((acc, item) => {
+            acc[item.status] = (acc[item.status] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const uniqueStatuses = Object.keys(statusCounts);
+        if (uniqueStatuses.length === 1) return uniqueStatuses[0];
+
+        if (statusCounts['pending']) return 'pending';
+        if (statusCounts['shipped']) return 'shipped';
+        return 'processed';
     };
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'confirmed':
+            case 'processed':
                 return 'green';
             case 'pending':
                 return 'yellow';
             case 'failed':
                 return 'red';
+            case 'shipped':
+                return 'blue';
+            case 'no-items':
+                return 'gray';
             default:
                 return 'gray';
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'confirmed':
+                return FaLink;
+            case 'processed':
+                return FaCheckCircle;
+            case 'pending':
+                return FaClock;
+            case 'shipped':
+                return FaTruck;
+            case 'failed':
+                return FaTimesCircle;
+            case 'no-items':
+                return FaUnlink;
+            default:
+                return FaClock;
+        }
+    };
+
+    const getStatusLabel = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'confirmed':
+                return 'Confirmada en blockchain';
+            case 'processed':
+                return 'Pedido procesado';
+            case 'pending':
+                return 'Pedido pendiente';
+            case 'shipped':
+                return 'Pedido enviado';
+            case 'failed':
+                return 'Transacción fallida';
+            case 'no-items':
+                return 'Sin items registrados';
+            default:
+                return status;
         }
     };
 
@@ -89,7 +169,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                 description: item.product.description,
                 quantity: item.quantity,
                 price_usd: item.price_at_sale,
-                subtotal: subtotal.toFixed(2)
+                subtotal: subtotal.toFixed(2),
+                status: item.status
             };
         });
         return {
@@ -99,32 +180,46 @@ export default function TransactionData({ tx }: TransactionDataProps) {
         };
     };
 
-    const showSummary = tx.status === 'confirmed' && orderItems.length > 0;
+    const showSummary = tx.status === 'confirmed';
     const summary = getSummary();
+    const orderStatus = getOrderStatus(orderItems);
 
     return (
         <Card.Root key={tx.id}>
             <Card.Body>
-                <VStack align="stretch" spaceY={3}>
+                <Stack align="stretch" spaceY={3}>
                     <Stack 
                         direction={{ base: "column", md: "row" }} 
                         justify="space-between" 
                         spaceX={{ base: 1, md: 2 }}
                     >
-                        <HStack 
-                            justify={{ base: "space-between", md: "flex-start" }}
-                            spaceX={{ base: 0, md: 2 }}
-                            width={{ base: "100%", md: "auto" }}
-                        >
-                            <Badge 
-                                colorPalette={getStatusColor(tx.status)} 
-                                px={2} 
-                                py={1} 
-                                borderRadius="full"
-                                minW="fit-content"
+                        <Flex direction={{ base: "column", md: "row" }} align="flex-start" gap={2}>
+                            {/* Estado de la transacción en blockchain */}                            
+
+                           <Tag.Root 
+                                size="sm" 
+                                colorPalette={getStatusColor(tx.status)}
                             >
-                                {tx.status}
-                            </Badge>
+                                <Tag.StartElement as={getStatusIcon(tx.status)} />
+                                <Tag.Label>{getStatusLabel(tx.status)}</Tag.Label>
+                            </Tag.Root>
+                            
+                            {/* Estado del pedido (order items) - Solo para transacciones confirmadas */}
+                            {tx.status === 'confirmed' && (
+                                <Tag.Root 
+                                    size="sm" 
+                                    colorPalette={getStatusColor(orderStatus)}
+                                >
+                                    {initialLoad ? (
+                                        <Spinner size="xs" />
+                                    ) : (
+                                        <>
+                                        <Tag.StartElement as={getStatusIcon(orderStatus)} />
+                                        <Tag.Label>{getStatusLabel(orderStatus)}</Tag.Label>
+                                        </>
+                                    )}
+                                </Tag.Root>
+                            )}
                             <Text 
                                 fontSize="sm" 
                                 color="gray.500"
@@ -138,7 +233,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                                     minute: 'numeric'
                                 })}
                             </Text>
-                        </HStack>
+                        </Flex>
+
                         <Text 
                             fontWeight="bold" 
                             textAlign="right"
@@ -147,7 +243,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                             {formatScientificToDecimal(tx.amount)} {tx.token}
                         </Text>
                     </Stack>
-                    <HStack direction={'row'} justify={'space-between'}>
+                    
+                    <Stack direction={'row'} justify={'space-between'}>
                         <Text fontSize="sm" truncate>
                             {(tx.transaction_hash === tx.wallet_address) ? "Hash sin registrar" : tx.transaction_hash}
                             <IconButton
@@ -169,8 +266,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                                 {expandedCards[tx.id] ? 'Ocultar' : 'Detalles'}
                             </IconButton>
                         )}                    
-                    </HStack>
-                </VStack>
+                    </Stack>
+                </Stack>
 
                 {showSummary && (
                     <Collapsible.Root open={expandedCards[tx.id]}>
@@ -189,10 +286,19 @@ export default function TransactionData({ tx }: TransactionDataProps) {
                                         <VStack align="stretch" gap={4}>
                                             {summary.products.map((product) => (
                                                 <Box key={product.id} borderBottomWidth="1px" pb={4} _last={{ borderBottomWidth: 0 }}>
-                                                    <HStack justify="space-between">
+                                                    <Flex direction={{ base: "column", md: "row" }} justify="space-between">
                                                         <Text fontWeight="bold">{product.name}</Text>
-                                                        <Text>x {product.quantity}</Text>
-                                                    </HStack>
+                                                        <HStack>
+                                                            <Text>x {product.quantity}</Text>
+                                                            <Tag.Root 
+                                                                size="sm" 
+                                                                colorPalette={getStatusColor(product.status)}
+                                                            >
+                                                                <Tag.StartElement as={getStatusIcon(product.status)} />
+                                                                <Tag.Label>{getStatusLabel(product.status)}</Tag.Label>
+                                                            </Tag.Root>
+                                                        </HStack>
+                                                    </Flex>
                                                     {product.description && (
                                                         <Text fontSize="sm" opacity={0.5} mt={1}>
                                                             {product.description}

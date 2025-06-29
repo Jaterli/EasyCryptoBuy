@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import { useWallet } from "@/features/user/hooks/useWallet";
 import { Dialog, useDisclosure, Text, Button } from "@chakra-ui/react";
-import { useWalletAuth } from "../auth/WalletAuthService";
 
 type AuthDialogContextType = {
   requireAuth: () => Promise<boolean>;
@@ -17,8 +16,7 @@ export const useAuthDialog = () => {
 
 export const AuthDialogProvider = ({ children }: { children: React.ReactNode }) => {
   const { open, onOpen, onClose } = useDisclosure();
-  const { address } = useWallet();
-  const { authenticateWallet } = useWalletAuth();
+  const { address, authenticate } = useWallet();
   const [authPromise, setAuthPromise] = useState<((value: boolean) => void) | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,16 +30,11 @@ export const AuthDialogProvider = ({ children }: { children: React.ReactNode }) 
   const handleConfirm = async () => {
     if (!address || !authPromise) return;
     setLoading(true);
-    const result = await authenticateWallet(address);
+    const result = await authenticate();
     setLoading(false);
     onClose();
-    authPromise(result.success);
+    authPromise(result);
     setAuthPromise(null);
-    // if (result.success) {
-    //   window.location.reload(); // refrescar componente/página
-    //   setIsAuthenticated(true);
-    // }
-
 };
 
   const handleCancel = () => {

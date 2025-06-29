@@ -110,7 +110,6 @@ export function Payment() {
         {steps.map((step, index) => {
           // No renderizar el paso 0 (index 0) si token es ETH y estamos en approving
           if (token === "ETH" && index === 1) {
-            console.log("Saltando");
             return null;
           }
           
@@ -226,7 +225,6 @@ export function Payment() {
     if (address){
       const checkForPendingTx = async  () => {
         try {
-          console.log("Comprobando si hay transacciones pendientes...");
           const { data } = await axiosUserAPI.checkPendingTransactions(address);       
           if (data.success) {
             setChekPendingTx(data.has_pending);
@@ -263,15 +261,16 @@ export function Payment() {
           }
   
           // Obtener detalles
-          const detailsResponse = await axiosUserAPI.getTransactionDetails(hash);
+          const detailsResponse = await axiosUserAPI.getTransactionDetail(hash);
           
-          if (detailsResponse.data.success && detailsResponse.data.transaction) {
+          if (detailsResponse.success && detailsResponse.data) {
             setCart([]);
-            setTransaction(detailsResponse.data.transaction);
+            setTransaction(detailsResponse.data);
             setPaymentCompleted(true);
-            showToast('success', "¡Enhorabuena!", updateResponse.data.message);
+            // showToast('success', "¡Enhorabuena!", '');
           } else {
-            throw new Error(detailsResponse.data.message || "Error al obtener detalles de la transacción");
+            console.log("Error al obtener detalles de la transacción");
+            throw new Error(detailsResponse.error || "Error al obtener detalles de la transacción");
           }
         } catch (error) {
           cleanupFailedTransaction();
@@ -294,12 +293,11 @@ export function Payment() {
     if (paymentCompleted && transactionData && transactionData.status === 'pending' && hash) {
       const fetchTransactionDetails = async () => {
         try {
-          const response = await axiosUserAPI.getTransactionDetails(hash);
-          
-          if (response.data.success) {
-            setTransaction(response.data.transaction);
-            
-            if (response.data.transaction.status === 'confirmed') {
+          const response = await axiosUserAPI.getTransactionDetail(hash);
+          if (response.success && response.data) {
+            setTransaction(response.data);
+
+            if (response.data.status && response.data.status === 'confirmed') {
               clearInterval(interval);
             }
           }
