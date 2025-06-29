@@ -8,7 +8,7 @@ const truncateAddress = (address: string, startLength = 6, endLength = 4): strin
 };
 
 const WalletAddress = ({ address }: { address: string }) => {
-  const [isTruncated, setIsTruncated] = useState(false);
+  const [isTruncated, setIsTruncated] = useState(true);
 
   return (
     <HStack>

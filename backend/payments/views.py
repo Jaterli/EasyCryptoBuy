@@ -320,14 +320,14 @@ def get_transactions_by_wallet(request, wallet_address):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_transaction_detail(request, transaction_hash):
+@permission_classes([AllowAny])
+def get_transaction_detail(request, tx_hash):
     try:
-        transaction = Transaction.objects.get(transaction_hash=transaction_hash)
+        transaction = Transaction.objects.get(transaction_hash=tx_hash)
         serializer = TransactionSerializer(transaction)
         return Response({'success': True, 'data': serializer.data})
     except Transaction.DoesNotExist:
-        return Response({'success': False, 'error': f'Transacción con hash {transaction_hash} no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'success': False, 'error': f'Transacción con hash {tx_hash} no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(["GET"])

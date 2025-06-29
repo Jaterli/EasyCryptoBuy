@@ -10,29 +10,24 @@ import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal"
 import { authUserAPI } from "../services/userApi";
 import { useWallet } from "@/features/user/hooks/useWallet";
 import { Transaction } from "@/shared/types/types";
-import { useWalletAuth } from "../auth/WalletAuthService";
 
 export default function Home() {
-  const { address, isConnected, isAuthenticated, setIsAuthenticated } = useWallet();
+  const { address, isConnected, isAuthenticated, authenticate } = useWallet();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  const { authenticateWallet } = useWalletAuth();
 
   const handleSign = async () => {
     if (address){
-      const result = await authenticateWallet(address);
-      setLoading(false);
-      if(result.success){
-        setIsAuthenticated(true);
-      }    
+      await authenticate();
+      setLoading(false);  
     }
   };
 
   useEffect(() => {
     if (address && isAuthenticated) {
       setLoading(true);
-      authUserAPI.getUserTransactions(address)
+      authUserAPI.getTransactionsByWallet(address)
         .then(response => {
           setTransactions(response.data.transactions);
         })

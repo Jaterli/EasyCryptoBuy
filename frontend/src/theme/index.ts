@@ -72,11 +72,10 @@ const customTheme = defineConfig({
       margin: "0 auto",
       border: "1px solid var(--border-color)",
       borderRadius: "12px",
-      backgroundColor: "var(--bg-color-secondary)",
+      backgroundColor: "varnav-bg-color)",
       transition: "all 0.3s ease",
 
       _dark: {
-        backgroundColor: "var(--bg-secondary)",
         borderColor: "var(--border-color)"
       },
 

@@ -5,7 +5,8 @@ import {
   Table,
   Flex,
   IconButton,
-  Link
+  Link,
+  Button
 } from "@chakra-ui/react";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -14,12 +15,14 @@ import { Transaction, UserProfile } from "@/shared/types/types";
 import { toaster } from "@/shared/components/ui/toaster";
 import { FaCopy } from 'react-icons/fa';
 import { MdOutlineViewHeadline } from "react-icons/md";
+import { useNavigate } from 'react-router-dom';
 
 export const UserDetailPage = () => {
   const { wallet_address } = useParams<{ wallet_address: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const copyToClipboard = (hash: string) => {
       navigator.clipboard.writeText(hash);
@@ -54,6 +57,8 @@ export const UserDetailPage = () => {
 
   return (
     <Box p={{ base: 4, md: 6 }}>
+      <Button size={"xs"} float={"right"} onClick={() => navigate(-1)}>Volver</Button>
+      
       <Heading size="lg" mb={4}>
         Detalles del Usuario
       </Heading>

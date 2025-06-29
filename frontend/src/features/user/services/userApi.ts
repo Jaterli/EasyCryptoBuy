@@ -1,7 +1,7 @@
 import { API_PATHS } from '@/config/paths';
 import axios from 'axios';
 import { authUserAxios } from '../auth/authUserAxios';
-import { ApiResponse, UserProfile, OrderItem } from '@/shared/types/types';
+import { ApiResponse, UserProfile, OrderItem, Transaction } from '@/shared/types/types';
 
 
 // Función auxiliar para manejar errores de API
@@ -81,13 +81,10 @@ export const authUserAPI = {
 
   updateProfile: async (data: UserProfile): Promise<ApiResponse<UserProfile>> => {
     try {
-      const { data: responseData } = await authUserAxios.patch(
-        `${API_PATHS.users}/user-profile`, 
-        data
-      );
+      const { data: responseData } = await authUserAxios.patch(`${API_PATHS.users}/user-profile`, data);
       return { success: true, data: responseData };
-    } catch (error) {
-      return handleApiError<UserProfile>(error);
+    } catch (err) {
+      return handleApiError<UserProfile>(err);
     }
   },
 };
@@ -127,8 +124,17 @@ export const axiosUserAPI = {
   updateTransaction: (id: number, payload: unknown) => 
     authUserAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, payload),
   
-  // getTransactionDetail: (hash: string) => 
+  // getTransactionDetail: (hash: `0x${string}` | undefined) => 
   //   authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`),
+  
+  getTransactionDetail: async (hash: `0x${string}` | undefined): Promise<ApiResponse<Transaction>> => {
+    try {
+      const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`);
+      return data;
+    } catch (err) {
+      return handleApiError<Transaction>(err);
+    }
+  },
   
   // getTransactionDetail: async (hash: string) => {
   //   return await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`)
@@ -137,7 +143,6 @@ export const axiosUserAPI = {
   //     throw new Error (err.response.data.error);
   //   })
   // },
-
 
   deleteTransaction: (id: number) => 
     authUserAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),

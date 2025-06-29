@@ -6,18 +6,18 @@ interface RequireRegistrationProps {
   children: React.ReactNode;
 }
 
-const RequireRegistration = ({ children }: RequireRegistrationProps) => {
+const RequireRegistration = ({ children }: RequireRegistrationProps) => {  
   const { isWalletRegistered, isLoading } = useWallet();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isWalletRegistered === false) {
+    if (!isLoading && !isWalletRegistered) {
       navigate("/register-wallet", { state: { from: location.pathname } });
     }
   }, [isWalletRegistered, isLoading]);
 
-  if (!isWalletRegistered){
+  if (!isLoading && !isWalletRegistered){
     return (
       <div style={{ textAlign: 'center', padding: '20px' }}>
         <h2 style={{ color: '#e74c3c' }}>Registro requerido!</h2>

@@ -37,9 +37,8 @@ export default function ProfilePage() {
     setCustomError(null);
 
     const fetchProfile = async () => {
-        
       if (!isAuthenticated) return;
-      
+  
       try {
         setIsLoading(true);
         const response = await authUserAPI.getProfile();
@@ -126,7 +125,7 @@ export default function ProfilePage() {
 
   return (
     <Box p={{ base: 4, md: 6 }} mb="6">
-      <Heading marginBottom="4">Perfil de Usuario ({address})</Heading>
+      <Heading marginBottom="4">Perfil de Usuario</Heading>
 
         {/* Formulario de actualización */}
         <Box as="form" mt={4} onSubmit={handleSubmit(onSubmit)}>
@@ -134,6 +133,10 @@ export default function ProfilePage() {
             <Stack spaceY={4}>
             <Fieldset.Legend fontSize="xl" mb="5">Actualizar datos</Fieldset.Legend>            
             <Fieldset.Content>
+              <Field.Root invalid={!!errors.name}>
+              <Field.Label>Wallet</Field.Label>
+              <Text fontSize={'0.95em'}>{address}</Text>
+              </Field.Root>
               <Field.Root invalid={!!errors.name}>
                 <Field.Label>Nombre completo</Field.Label>
                 <Input
