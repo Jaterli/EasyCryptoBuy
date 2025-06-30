@@ -157,7 +157,7 @@ export function Navbar() {
                   
                   {isConnected && (
                     <>
-                      <NavButton to="/payments-history">Historial de Compras</NavButton>
+                      <NavButton to="/purchase-history">Historial de Compras</NavButton>
                       <NavButton to="/profile">Perfil</NavButton>
                     </>
                   )}
@@ -193,7 +193,7 @@ export function Navbar() {
       <NavButton to="/products-catalog">Productos</NavButton>
       {isConnected && (
         <>
-          <NavButton to="/payments-history">Historial de Compras</NavButton>
+          <NavButton to="/purchase-history">Historial de Compras</NavButton>
           <NavButton to="/profile">Perfil</NavButton>
         </>
       )}
@@ -216,7 +216,7 @@ export function Navbar() {
       boxShadow="sm"
       position="sticky"
       top={0}
-      zIndex="sticky"
+      zIndex="5"
       bg="bg.surface"
     >
       <Flex align="center">

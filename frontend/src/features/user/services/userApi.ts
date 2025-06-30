@@ -54,17 +54,28 @@ export const authUserAPI = {
     authUserAxios.get(`${API_PATHS.payments}/get-transactions-by-wallet/${wallet}`),
 
 
+  // getTransactionOrderItems: async (id: number): Promise<ApiResponse<OrderItem[]>> => {
+  //   try {
+  //     const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-transaction-order-items/${id}`);
+  //     return { success: true, data: data.orderItems || [] };
+  //   } catch (err) {
+  //     let errorMessage = 'Ocurrió un error';
+  //     if (axios.isAxiosError(err) && err.response?.data?.message) {
+  //       errorMessage = err.response.data.message;
+  //     } else if (err instanceof Error) {
+  //       errorMessage = err.message;
+  //     }      
+  //     return { success: false, error: errorMessage };
+  //   }
+  // },
+
   getTransactionOrderItems: async (id: number): Promise<ApiResponse<OrderItem[]>> => {
     try {
       const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-transaction-order-items/${id}`);
       return { success: true, data: data.orderItems || [] };
     } catch (err) {
-      let errorMessage = 'Ocurrió un error';
-      if (axios.isAxiosError(err) && err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }      
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener los usuarios';
+      console.error("API Error - getTransactionOrderItems:", err);
       return { success: false, error: errorMessage };
     }
   },

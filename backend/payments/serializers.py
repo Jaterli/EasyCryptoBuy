@@ -57,5 +57,5 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ('transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items')      
+        fields = ('id','transaction_hash', 'wallet_address', 'token', 'amount', 'status', 'created_at', 'order_items')      
 

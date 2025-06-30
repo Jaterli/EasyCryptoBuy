@@ -47,10 +47,6 @@ export const RequireAuthentication = ({ children }: RequireAuthProps) => {
 
   useEffect(() => {
     // No hacer nada mientras se está cargando el estado inicial
-    console.log("isConnected: ",isConnected);
-    console.log("isAuthenticated: ",isAuthenticated);
-    console.log("isWalletRegistered: ",isWalletRegistered);
-    console.log("isLoading: ",isLoading);
     if (isLoading) return;
 
     // Si ya está autenticado, permitir acceso

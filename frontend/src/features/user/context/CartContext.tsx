@@ -131,42 +131,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cart, isWalletRegistered, address]);
 
-  // useEffect(() => {
-  //   const syncCartWithBackend = async () => {
-  //     if (!address || !isWalletRegistered) return;
-
-  //     // Si existe carrito local y no hay carrito cargado aún desde backend
-  //     const guestCartString = localStorage.getItem("guest_cart");
-  //     if (guestCartString) {
-  //       try {
-  //         const guestCart: CartItem[] = JSON.parse(guestCartString);
-  //         if (guestCart.length > 0) {
-  //           setCart(guestCart); // actualizamos el estado local
-  //           // Luego sincronizamos con el backend
-  //           const payload = {
-  //             wallet: address,
-  //             cart_items: guestCart.map((cart_item: CartItem) => ({
-  //               product_id: cart_item.product.id,
-  //               quantity: cart_item.quantity
-  //             }))
-  //           };
-  //           await axiosUserAPI.saveCart(payload);
-  //           localStorage.removeItem("guest_cart");
-  //         }
-  //       } catch (e) {
-  //         console.error("Error sincronizando carrito de invitado:", e);
-  //       }
-  //     }
-  //   };
-
-  //   syncCartWithBackend();
-  // }, [address, isWalletRegistered]);
-
   // Función para cargar el carrito desde el backend
   useEffect(() => {
     const loadCart = async () => {
       if (!address || !isWalletRegistered) return;
-
+      console.log("isWalletRegistered: ", isWalletRegistered);
       console.log("Cargando carrito...")
       // Si existe carrito local y no hay carrito cargado aún desde backend
       const guestCartString = localStorage.getItem("guest_cart");

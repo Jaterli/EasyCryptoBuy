@@ -18,6 +18,7 @@ import { useForm } from 'react-hook-form';
 import { useWallet } from '@/features/user/hooks/useWallet';
 import { authUserAPI } from "@/features/user/services/userApi";
 import { UserProfile, UpdateProfileData } from "@/shared/types/types";
+import WalletAddress from '@/shared/components/TruncatedAddress';
 
 
 export default function ProfilePage() {
@@ -97,6 +98,16 @@ export default function ProfilePage() {
     }
   };
 
+
+  if (!address) {
+    return (
+      <Box p={6}>
+        <Heading marginBottom="4">Perfil de Usuario</Heading>
+        <Text>Conecta tu wallet para continuar</Text>
+      </Box>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <Box p={6}>
@@ -128,14 +139,14 @@ export default function ProfilePage() {
       <Heading marginBottom="4">Perfil de Usuario</Heading>
 
         {/* Formulario de actualización */}
-        <Box as="form" mt={4} onSubmit={handleSubmit(onSubmit)}>
-          <Fieldset.Root size="lg" className="form">
+        <Box as="form" className="form" mt={4} onSubmit={handleSubmit(onSubmit)}>
+          <Fieldset.Root>
             <Stack spaceY={4}>
             <Fieldset.Legend fontSize="xl" mb="5">Actualizar datos</Fieldset.Legend>            
             <Fieldset.Content>
               <Field.Root invalid={!!errors.name}>
               <Field.Label>Wallet</Field.Label>
-              <Text fontSize={'0.95em'}>{address}</Text>
+              <Text fontSize={'0.95em'}><WalletAddress address={address} /></Text>
               </Field.Root>
               <Field.Root invalid={!!errors.name}>
                 <Field.Label>Nombre completo</Field.Label>

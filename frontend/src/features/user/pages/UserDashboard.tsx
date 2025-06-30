@@ -12,7 +12,7 @@ import { useWallet } from "@/features/user/hooks/useWallet";
 import { Transaction } from "@/shared/types/types";
 
 export default function Home() {
-  const { address, isConnected, isAuthenticated, authenticate } = useWallet();
+  const { address, isConnected, isWalletRegistered, isAuthenticated, authenticate } = useWallet();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,7 +76,12 @@ export default function Home() {
             <CardHeader>
                 <HStack>
                 <Icon as={FaWallet} color="blue.500" />
-                <Heading size="md">Estado de Wallet</Heading>
+                <Heading size="md">Estado de Wallet 
+                    <Badge colorPalette="green" ml={4} px={2} py={1} borderRadius="full">
+                    Conectado
+                    </Badge>
+                </Heading>
+                
                 </HStack>
             </CardHeader>
             <CardBody>
@@ -95,10 +100,20 @@ export default function Home() {
                         <FaCopy />
                         </IconButton>
                     </HStack>
+                    { !isWalletRegistered && (
+                      <Box textAlign={"center"}>
+                        <Text opacity={0.6} mb={4}>Esta Wallet todavía no ha sido registrada</Text>
+                        <Button 
+                          colorPalette="green" 
+                          onClick={() => navigate("/register-wallet")}
+                        >
+                          Registrar Wallet
+                        </Button>                      
+                      </Box>
+                    )}
+
+                    
                     </Box>
-                    <Badge colorPalette="green" px={2} py={1} borderRadius="full">
-                    Conectado
-                    </Badge>
                 </VStack>
                 ) : (
                 <VStack spaceY={4}>
@@ -171,7 +186,7 @@ export default function Home() {
             </CardHeader>
             <CardBody>
 
-              {!isAuthenticated ? (
+              {isWalletRegistered && !isAuthenticated ? (
                 <Box textAlign="center" py={2} spaceY={4}>
                   <Text color="gray.500">Necesitas firmar con tu wallet para ver esta sección.</Text>
                     <Button colorPalette="blue" onClick={handleSign}>
@@ -248,7 +263,7 @@ export default function Home() {
                   </Stack>
               ) : (
                 <Box textAlign="center" py={6}>
-                  <Text color="gray.500">No se encontraron transacciones.</Text>
+                  <Text opacity={0.6}>No se encontraron transacciones.</Text>
                 </Box>
              )
             }

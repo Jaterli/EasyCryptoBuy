@@ -26,17 +26,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const checkWalletRegistration = useCallback(async () => {
     if (!address) return;
-   
     setIsLoading(true);
-    
+
     try {
       const response = await axiosUserAPI.checkWallet(address);
       setIsWalletRegistered(response.data.isRegistered);
     } catch (error) {
       console.error("Registration check error:", error);
       setIsWalletRegistered(false);
-    } 
-    
+    } finally {
+      setIsLoading(false);
+    }
+
   }, [address]);
 
   const authenticate = useCallback(async (): Promise<boolean> => {
@@ -91,7 +92,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setIsAuthenticated(isValid);
           
           if (!isValid) {
-            console.log("Token inválido o no coincide con la wallet");
+            console.error("Token inválido o no coincide con la wallet");
             disconnectWallet();
           }
         } catch (error) {

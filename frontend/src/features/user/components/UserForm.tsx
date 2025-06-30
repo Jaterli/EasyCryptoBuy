@@ -19,7 +19,7 @@ const UserForm = ({ onSubmit }: UserFormProps) => {
 
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)} className="form">
-      <Fieldset.Root size="lg" maxW="md">
+      <Fieldset.Root>
         <Stack spaceY={3}>
           {/* Campo para el nombre */}
           <Fieldset.Content>
