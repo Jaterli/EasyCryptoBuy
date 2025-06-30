@@ -67,8 +67,8 @@ const customTheme = defineConfig({
       }
     },
     ".form": {
-      maxWidth: "100%",
-      padding: "1.5rem",
+      width: "95%",
+      padding: "1.2rem",
       margin: "0 auto",
       border: "1px solid var(--border-color)",
       borderRadius: "12px",
@@ -79,13 +79,8 @@ const customTheme = defineConfig({
         borderColor: "var(--border-color)"
       },
 
-      "@media screen and (min-width: 320px)": {
-        padding: "1.25rem"
-      },
-
       "@media screen and (min-width: 768px)": {
-        maxWidth: "600px",
-        padding: "2rem",
+        width: "600px",      
         "& .field": {
           gridTemplateColumns: "1fr 2fr",
           gap: "1rem"
@@ -93,8 +88,7 @@ const customTheme = defineConfig({
       },
 
       "@media screen and (min-width: 1024px)": {
-        maxWidth: "700px",
-        padding: "2.5rem"
+        width: "700px",
       },
 
       "& .field-label": {
@@ -108,7 +102,6 @@ const customTheme = defineConfig({
         color: "var(--text-color)",
         border: "2px solid var(--border-color)",
         borderRadius: "8px",
-        // padding: "0.75rem",
         transition: "all 0.2s ease",
         
         _hover: {

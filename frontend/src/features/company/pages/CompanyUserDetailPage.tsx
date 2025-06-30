@@ -13,8 +13,7 @@ import { useEffect, useState } from "react";
 import { authCompanyAPI } from "../services/companyApi";
 import { Transaction, UserProfile } from "@/shared/types/types";
 import { toaster } from "@/shared/components/ui/toaster";
-import { FaCopy } from 'react-icons/fa';
-import { MdOutlineViewHeadline } from "react-icons/md";
+import { FaCopy, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 export const UserDetailPage = () => {
@@ -120,7 +119,7 @@ export const UserDetailPage = () => {
                   >{tx.status} 
                   </Table.Cell>
                   <Table.Cell>{new Date(tx.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</Table.Cell>
-                  <Table.Cell maxW={"35px"} textAlign={'center'}><Link href={`/company/transaction-detail/${tx.transaction_hash}`}><MdOutlineViewHeadline /></Link></Table.Cell>
+                  <Table.Cell maxW={"35px"} textAlign={'center'}><Link href={`/company/transaction-detail/${tx.transaction_hash}`}><FaEye /></Link></Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>

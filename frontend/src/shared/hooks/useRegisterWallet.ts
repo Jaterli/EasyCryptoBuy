@@ -29,7 +29,7 @@ export function useRegisterWallet() {
         email: formData.email,
       });
 
-      if (response.success) {
+      if (response.success) {       
         // Autenticar automáticamente después del registro
         const authResult = await authenticate();
         

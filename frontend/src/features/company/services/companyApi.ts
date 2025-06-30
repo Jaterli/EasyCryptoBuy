@@ -9,8 +9,8 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/company-dashboard`);
       return data;
-    } catch (error) {
-      throw new Error("Error al obtener los datos para el dashboard. "+error);
+    } catch (err) {
+      throw new Error("Error al obtener los datos para el dashboard. "+err);
     }
   },
 
@@ -18,9 +18,9 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-all-users`);
       return { success: true, data: data.users || [] };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al obtener los usuarios';
-      console.error("API Error - getAllUsers:", error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener los usuarios';
+      console.error("API Error - getAllUsers:", err);
       return { success: false, error: errorMessage };
     }
   },
@@ -42,9 +42,9 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-transactions-by-wallet/${walletAddress}`);
       return { success: true, data: data.transactions || [] };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al obtener transacciones';
-      console.error(`API Error - getTransactionsByWallet(${walletAddress}):`, error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener transacciones';
+      console.error(`API Error - getTransactionsByWallet(${walletAddress}):`, err);
       return { success: false, error: errorMessage };
     }
   },
@@ -54,9 +54,9 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-all-transactions`);
       return { success: true, data: data.transactions || [] };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al obtener transacciones';
-      console.error(`API Error - getAllTransactions():`, error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener transacciones';
+      console.error(`API Error - getAllTransactions():`, err);
       return { success: false, error: errorMessage };
     }
   },
@@ -66,9 +66,9 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-transaction-order-items/${id}`);
       return { success: true, data: data.orderItems || [] };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al obtener los usuarios';
-      console.error("API Error - getTransactionOrderItems:", error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al obtener los usuarios';
+      console.error("API Error - getTransactionOrderItems:", err);
       return { success: false, error: errorMessage };
     }
   },
@@ -77,24 +77,24 @@ export const authCompanyAPI = {
     try {
       const { data } = await authCompanyAxios.get(`${API_PATHS.company}/products`);
       return data;
-    } catch (error) {
-      throw new Error("Error al obtener los productos. "+error);
+    } catch (err) {
+      throw new Error("Error al obtener los productos. "+err);
     }
   },
 
   createProduct: (product: Omit<Product, "id">): Promise<void> => {
     try {
       return authCompanyAxios.post(`${API_PATHS.company}/products/`, product);
-    } catch (error) {
-      throw new Error("Error al crear producto. "+error);
+    } catch (err) {
+      throw new Error("Error al crear producto. "+err);
     }
   },
 
   updateProduct: (id: string, product: Product): Promise<void> => {
     try {
       return authCompanyAxios.put(`${API_PATHS.company}/products/${id}/`, product);
-    } catch (error) {
-      throw new Error("Error al actualizar producto. "+error);
+    } catch (err) {
+      throw new Error("Error al actualizar producto. "+err);
     }
   },
 

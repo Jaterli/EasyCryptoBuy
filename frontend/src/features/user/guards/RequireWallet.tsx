@@ -10,7 +10,7 @@ interface RequireWalletProps {
 }
 
 const RequireWallet = ({ children }: RequireWalletProps) => {
-  const { address } = useWallet(); // Obtén la dirección de la wallet desde el contexto
+  const { address } = useWallet();
   const { connectAsync, connectors } = useConnect();
 
 

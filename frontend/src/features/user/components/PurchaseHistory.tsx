@@ -23,7 +23,7 @@ const itemsPerPageOptions = createListCollection({
   ],
 });
 
-export function PaymentHistory() {
+export function PurchaseHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +64,7 @@ export function PaymentHistory() {
         mb={4}
         gap={2}
       >
-        Historial de Pagos de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}
+        Historial de compras de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}
       </Flex>
       
       {isLoading ? (

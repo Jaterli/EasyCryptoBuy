@@ -6,9 +6,8 @@ import { WalletProvider } from "@/features/user/context/WalletProvider";
 import RegisterWalletPage from "@/features/user/pages/RegisterWalletPage";
 import Footer from "@/shared/components/Footer";
 import { Payment } from "@/features/user/Payment/Payment";
-import { PaymentHistory } from "@/features/user/components/PaymentHistory";
+import { PurchaseHistory } from "@/features/user/components/PurchaseHistory";
 import Home from "@/features/user/pages/UserDashboard";
-import SignWalletPage from "@/features/user/pages/_SignWalletPage";
 import RequireWallet from "@/features/user/guards/RequireWallet";
 import RequireRegistration from "@/features/user/guards/RequireRegistration";
 import NotFoundPage from "@/features/user/pages/NotFoundPage";
@@ -32,10 +31,9 @@ export const AppUser = () => {
               <Route path="/dashboard" element={<Home />} />
               <Route path="/products-catalog" element={<ProductCatalogPage />} />
               <Route path="/cart-sumary" element={<CartSummaryPage />} />
-              <Route path="/payments-history" element={<RequireWallet><RequireRegistration><RequireAuthentication><PaymentHistory /></RequireAuthentication></RequireRegistration></RequireWallet>} />
+              <Route path="/purchase-history" element={<RequireWallet><RequireRegistration><RequireAuthentication><PurchaseHistory /></RequireAuthentication></RequireRegistration></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><RequireRegistration><Payment /></RequireRegistration></RequireWallet>} />
               <Route path="/register-wallet" element={<RequireWallet><RegisterWalletPage /></RequireWallet>} />
-              <Route path="/sign-wallet" element={<RequireWallet><SignWalletPage /></RequireWallet>} />
               <Route path="/profile" element={<RequireWallet><RequireRegistration><RequireAuthentication><ProfilePage /></RequireAuthentication></RequireRegistration></RequireWallet>} />
               <Route path="/" element={<Home />} />                            
               <Route path="*" element={<NotFoundPage />} />              

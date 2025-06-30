@@ -412,7 +412,7 @@ export function Payment() {
           <Text color="green.500" fontSize="2xl" fontWeight="bold">
             ¡Compra realizada con éxito!
           </Text>
-          <Box width="100%" maxWidth="800px">
+          <Box width="100%">
             <TransactionData key={transactionData.id} tx={transactionData} />
           </Box>
           <Button 
