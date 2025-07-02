@@ -15,10 +15,12 @@ export interface CartItem {
 }
   
 export interface ApiCartItem {
-  product_id: string;
-  product_name: string;
-  product_description: string;
-  product_price: number;
+  product: {
+    id: string;
+    name: string;
+    description: string;
+    amount_usd: number;
+  }
   quantity: number;
 }
 

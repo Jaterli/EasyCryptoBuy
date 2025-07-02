@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HStack, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
 
 const truncateAddress = (address: string, startLength = 6, endLength = 4): string => {
   if (!address) return "";
@@ -11,11 +11,9 @@ const WalletAddress = ({ address }: { address: string }) => {
   const [isTruncated, setIsTruncated] = useState(true);
 
   return (
-    <HStack>
-      <Text fontFamily="mono" truncate fontSize={{ base: "sm", md: "lg" }} onClick={() => setIsTruncated(!isTruncated)}>
+      <Text fontFamily="mono" as={"span"} truncate fontSize={{ base: "sm", md: "lg" }} onClick={() => setIsTruncated(!isTruncated)}>
         {isTruncated ? truncateAddress(address) : address}
       </Text>
-    </HStack>
   );
 };
 

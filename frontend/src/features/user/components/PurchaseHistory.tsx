@@ -8,6 +8,7 @@ import {
   Portal, 
   createListCollection,
   Stack,
+  Heading,
 } from '@chakra-ui/react';
 import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
@@ -56,16 +57,9 @@ export function PurchaseHistory() {
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
    return (
-    <Box p={{ base: 3, md: 5 }}>
-      <Flex 
-        direction={{ base: "column", md: "row" }} 
-        alignItems={{ base: "flex-start", md: "center" }}
-        fontSize="lg" 
-        mb={4}
-        gap={2}
-      >
-        Historial de compras de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}
-      </Flex>
+    <Box p={{ base: 3, md: 6 }}>
+
+      <Heading marginBottom="4">Historial de compras de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}</Heading>
       
       {isLoading ? (
         <Text>Cargando transacciones...</Text>
@@ -73,7 +67,7 @@ export function PurchaseHistory() {
         <Text>No se encontraron transacciones.</Text>
       ) : (
         <>
-          <Stack gap={4}>
+          <Stack gap={4} marginX={'auto'} maxW={{ base: "100%", md: "900px" }}>
             {currentTransactions.map((transaction) => (
               <TransactionData key={transaction.id} tx={transaction} />
             ))}

@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='orderitem',
             name='status',
-            field=models.CharField(choices=[('pending', 'pendiente'), ('processed', 'tramitado'), ('shipped', 'enviado')], default='pending', max_length=20),
+            field=models.CharField(choices=[('pending', 'pendiente'), ('processed', 'procesado'), ('shipped', 'enviado')], default='pending', max_length=20),
         ),
     ]

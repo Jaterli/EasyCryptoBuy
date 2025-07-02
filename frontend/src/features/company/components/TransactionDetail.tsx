@@ -7,7 +7,7 @@ import {
   Select,
   Flex,
   Spinner,
-  Button
+  Button,
 } from "@chakra-ui/react";
 import { toaster } from "@/shared/components/ui/toaster";
 import { useParams } from "react-router-dom";
@@ -26,7 +26,7 @@ const statusColors = {
 const statusOptions = createListCollection({
   items: [
     { label: "Pendiente", value: "pending" },
-    { label: "Tramitado", value: "processed" },
+    { label: "Procesado", value: "processed" },
     { label: "Enviado", value: "shipped" },
   ],
 });
@@ -73,7 +73,7 @@ export const TransactionDetail: React.FC = () => {
   if (!transaction) {
     return (
       <Box p={6}>
-        <Text>Transacción no encontrada.</Text>
+        <Text>Vemta no encontrada.</Text>
       </Box>
     );
   }
@@ -82,7 +82,7 @@ export const TransactionDetail: React.FC = () => {
     <Box p={{ base: 3, md: 6 }}>
       <Button size={"xs"} float={"right"} onClick={() => navigate(-1)}>Volver</Button>
       <Heading size="lg" mb={4}>
-        Detalle de Transacción
+        Detalle de la venta
       </Heading>      
       <Box mb={6} fontSize={{base:"0.9em", md: "inherit"}}>
         <Text><strong>Hash:</strong> {transaction.transaction_hash}</Text>
@@ -102,6 +102,15 @@ export const TransactionDetail: React.FC = () => {
 
       <Heading size="md" mb={3}>Órdenes (productos comprados)</Heading>
 
+    {/* {transaction.status === 'pending' ? (
+        <Alert.Root status="warning">
+          <Alert.Indicator />
+          <Alert.Title>
+            Verifica la transacción en la blockchain para cargar los productos
+          </Alert.Title>
+        </Alert.Root>
+    ) : (
+       */}
       <Table.Root variant="outline" size="sm">
         <Table.Header>
           <Table.Row>
@@ -153,6 +162,7 @@ export const TransactionDetail: React.FC = () => {
           ))}
         </Table.Body>
       </Table.Root>
+    {/* )} */}
     </Box>
   );
 };

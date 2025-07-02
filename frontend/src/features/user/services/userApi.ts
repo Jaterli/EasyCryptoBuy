@@ -138,7 +138,7 @@ export const axiosUserAPI = {
   // getTransactionDetail: (hash: `0x${string}` | undefined) => 
   //   authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`),
   
-  getTransactionDetail: async (hash: `0x${string}` | undefined): Promise<ApiResponse<Transaction>> => {
+  getTransactionDetail: async (hash: string | undefined): Promise<ApiResponse<Transaction>> => {
     try {
       const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`);
       return data;

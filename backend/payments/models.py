@@ -7,6 +7,7 @@ class Transaction(models.Model):
     wallet_address = models.CharField(max_length=42)
     token = models.CharField(max_length=10, default='USDT')
     amount = models.DecimalField(max_digits=36, decimal_places=18)
+    amount_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
@@ -29,7 +30,7 @@ class Cart(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     transaction = models.OneToOneField(
         'Transaction',
-        on_delete=models.CASCADE,  # Cambiado de SET_NULL a CASCADE
+        on_delete=models.SET_NULL, # Establece el carrito a null pero no lo elimina
         null=True,
         blank=True,
         related_name='cart'
@@ -64,7 +65,6 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_items')
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
-    price_at_sale = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     def __str__(self):
         return f"{self.quantity} x {self.product.name} (Cart #{self.cart.id})"
@@ -78,7 +78,7 @@ class CartItem(models.Model):
 class OrderItem(models.Model):
     STATUS_CHOICES = [
         ('pending', 'pendiente'),
-        ('processed', 'tramitado'),
+        ('processed', 'procesado'),
         ('shipped', 'enviado'),
     ]
 
