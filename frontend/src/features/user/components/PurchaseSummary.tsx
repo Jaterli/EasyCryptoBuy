@@ -1,4 +1,3 @@
-// components/PurchaseSummary.tsx
 import {
   Box,
   Text,
@@ -12,28 +11,99 @@ import {
 } from '@chakra-ui/react';
 import { 
   FaShoppingCart,
-  FaFileInvoice
+  FaFileInvoice,
+  FaCheckCircle,
+  FaTruck,
+  FaClock,
+  FaUnlink
 } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
 import { OrderItem } from '@/shared/types/types';
 import { API_PATHS } from '@/config/paths';
+import { authUserAPI } from '../services/userApi';
+import { toaster } from '@/shared/components/ui/toaster';
 
-interface PurchaseSummaryProps {
-  orderItems: OrderItem[];
-  transactionId: number;
-  loading: boolean;
-  getStatusColor: (status: string) => string;
-  getStatusIcon: (status: string) => React.ComponentType;
-  getStatusLabel: (status: string) => string;
-}
 
-export const PurchaseSummary = ({
-  orderItems,
-  transactionId,
-  loading,
-  getStatusColor,
-  getStatusIcon,
-  getStatusLabel
-}: PurchaseSummaryProps) => {
+export const PurchaseSummary = ({transactionId}: {transactionId: number}) => {
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'processed':
+        return 'green';
+      case 'pending':
+        return 'yellow';
+      case 'shipped':
+        return 'blue';
+      case 'no-items':
+        return 'gray';
+      default:
+        return 'gray';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'processed':
+        return FaCheckCircle;
+      case 'pending':
+        return FaClock;
+      case 'shipped':
+        return FaTruck;
+      case 'no-items':
+        return FaUnlink;
+      default:
+        return FaClock;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'processed':
+        return 'Procesado, pendiente de ser enviado';
+      case 'pending':
+        return 'Registrado, pendiente de ser procesado';
+      case 'shipped':
+        return 'Enviado';
+      case 'no-items':
+        return 'Sin items registrados';
+      default:
+        return status;
+    }
+  };
+
+
+  useEffect(() => {
+    const loadOrderItems = async () => {
+      try {
+        setLoading(true);
+        const response = await authUserAPI.getTransactionOrderItems(transactionId);
+        
+        if (response.success && response.data) {
+          setOrderItems(response.data);
+        } else {
+          toaster.create({ 
+            title: "Error al cargar detalles", 
+            description: response.error,
+            type: "error" 
+          });
+        }
+      } catch (error) {
+        toaster.create({ 
+          title: "Error al cargar detalles", 
+          type: "error" 
+        });
+        console.error("Error loading order items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrderItems();
+  }, [transactionId]);
+
   const getSummary = () => {
     let total_usd = 0;
     let items_count = 0;
@@ -65,7 +135,20 @@ export const PurchaseSummary = ({
   };
 
   if (loading) {
-    return <Spinner size="lg" />;
+    return (
+      <Box textAlign="center" py={10}>
+        <Spinner size="lg" />
+        <Text mt={2}>Cargando detalles...</Text>
+      </Box>
+    );
+  }
+
+  if (orderItems.length === 0) {
+    return (
+      <Box textAlign="center" py={10}>
+        <Text>No se encontraron detalles para esta transacción</Text>
+      </Box>
+    );
   }
 
   return (
@@ -101,7 +184,6 @@ export const PurchaseSummary = ({
             </HStack>
           </Box>
         ))}
-
 
         <HStack justify="space-between">
           <Text fontSize="lg" fontWeight="bold">Total Items:</Text>

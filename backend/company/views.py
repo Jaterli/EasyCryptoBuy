@@ -13,6 +13,10 @@ from django.db.models.functions import TruncDay
 from django.utils import timezone
 from datetime import timedelta
 from payments.management.commands.check_pending_transactions import Command
+import logging
+import asyncio
+
+logger = logging.getLogger(__name__)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -317,12 +321,6 @@ def update_order_item_status(request, order_item_id):
     order_item.save()
     return Response({'message': 'Estado actualizado'})
 
-
-from payments.management.commands.check_pending_transactions import Command
-import logging
-import asyncio
-
-logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])

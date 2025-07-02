@@ -264,10 +264,11 @@ export function Payment() {
           const detailsResponse = await axiosUserAPI.getTransactionDetail(hash);
           
           if (detailsResponse.success && detailsResponse.data) {
+            console.log("Vaciando carrito");
             setCart([]);
+            //clearCart();
             setTransaction(detailsResponse.data);
             setPaymentCompleted(true);
-            // showToast('success', "¡Enhorabuena!", '');
           } else {
             console.log("Error al obtener detalles de la transacción");
             throw new Error(detailsResponse.error || "Error al obtener detalles de la transacción");
@@ -412,12 +413,12 @@ export function Payment() {
           <Text color="green.500" fontSize="2xl" fontWeight="bold">
             ¡Compra realizada con éxito!
           </Text>
-          <Box width="100%">
+          <Box marginX={'auto'} width={{ base: "100%", md: "900px" }}>
             <TransactionData key={transactionData.id} tx={transactionData} />
           </Box>
           <Button 
             colorPalette="blue" 
-            onClick={() => navigate("/payments-history")}
+            onClick={() => navigate("/purchase-history")}
             mt={4}
           >
             Ir al historial de compras
@@ -427,25 +428,25 @@ export function Payment() {
     );
   }
 
-  if (checkPendingTx){
-    return (
-      <Box p={5} mt={5} mb={5}>
-        <VStack spaceY={8} align="center">
-          <Text textAlign={"center"} color="red.500" fontSize="lg">
-            Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain. <br />
-            Si no se confirman en los próximos minutos, contacte con la empresa. Mientras tanto no podrá realizar nuevas compras.
-          </Text>
-          <Button 
-            colorPalette="blue" 
-            onClick={() => navigate("/payments-history")}
-            mt={4}
-          >
-            Historial de Compras
-          </Button>
-        </VStack>
-      </Box>
-    );
-  }
+  // if (checkPendingTx){
+  //   return (
+  //     <Box p={5} mt={5} mb={5}>
+  //       <VStack spaceY={8} align="center">
+  //         <Text textAlign={"center"} color="red.500" fontSize="lg">
+  //           Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain. <br />
+  //           Si no se confirman en los próximos minutos, contacte con la empresa. Mientras tanto no podrá realizar nuevas compras.
+  //         </Text>
+  //         <Button 
+  //           colorPalette="blue" 
+  //           onClick={() => navigate("/purchase-history")}
+  //           mt={4}
+  //         >
+  //           Historial de Compras
+  //         </Button>
+  //       </VStack>
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Box p={5} mt={5} mb={5}>
@@ -527,7 +528,7 @@ export function Payment() {
             </Box>
           )}
           {cart.length > 0 && stockIssues.length > 0 && (
-            <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200" bg="red.50">
+            <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200">
               <Text color="red.600" fontWeight="bold" mb={2}>
                 No hay suficiente stock para los siguientes productos:
               </Text>

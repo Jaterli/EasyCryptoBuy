@@ -107,12 +107,12 @@ class Command(BaseCommand):
 
             # Marcar como confirmada
             tx.status = 'confirmed'
-            tx.transaction_hash = tx_hash
+            # tx.transaction_hash = '0x'+tx_hash # Ya se está guardando en la vista
             await sync_to_async(tx.save)()
             logger.info(f"Transacción {tx.id} confirmada y procesada.")
 
             cart = await sync_to_async(
-                lambda: Cart.objects.filter(transaction=tx.id).first()
+                lambda: Cart.objects.filter(transaction=tx.id, is_active=True).first()
             )()
 
             # Procesar carrito si existe

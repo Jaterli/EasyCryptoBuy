@@ -19,7 +19,7 @@ import { toaster } from "@/shared/components/ui/toaster";
 const statusOptions = createListCollection({
   items: [
     { label: "Pendiente", value: "pending" },
-    { label: "Tramitado", value: "processed" },
+    { label: "Procesado", value: "processed" },
     { label: "Enviado", value: "shipped" },
   ],
 });

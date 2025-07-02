@@ -16,26 +16,6 @@ from rest_framework import status
 from users.models import UserProfile
 from .serializers import CartSerializer, OrderItemSerializer, TransactionSerializer
 from django.db import transaction
-from users.decorators import wallet_required
-
-# @api_view(["POST"])
-# @permission_classes([AllowAny])
-# def verify_signature(request):
-#     try:
-#         data = request.data
-#         address = data['address']
-#         message = data['message']
-#         signature = data['signature']
-
-#         encoded_message = encode_defunct(text=message)
-#         recovered_address = Account.recover_message(encoded_message, signature=signature)
-
-#         if recovered_address.lower() == address.lower():
-#             return Response({'success': True, 'message': 'Firma verificada correctamente.'})
-#         else:
-#             return Response({'success': False, 'message': 'La firma no es válida.'}, status=400)
-#     except Exception as e:
-#         return Response({'success': False, 'message': str(e)}, status=500)
 
 
 @api_view(["POST"])
@@ -104,6 +84,7 @@ def update_transaction(request, transaction_id):
     except (TypeError, InvalidOperation):
         return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
+    # Verificación de la transacción en blockchain
     provider_url = getattr(settings, 'WEB3_PROVIDER', None)
     if not provider_url:
         return Response({"success": False, "message": "WEB3_PROVIDER_URL no configurado"}, status=500)
@@ -135,19 +116,59 @@ def update_transaction(request, transaction_id):
     if Transaction.objects.exclude(id=tx.id).filter(transaction_hash=transaction_hash).exists():
         return Response({"success": False, "message": "El hash ya está registrado en otra transacción"}, status=409)
 
-    # Actualizamos los campos básicos de la transacción
+    # Actualizar campos básicos de la transacción
     tx.wallet_address = wallet_address
     tx.amount = amount
     tx.transaction_hash = transaction_hash
     tx.token = token
+    
+    # Buscar el carrito asociado (usando first() para obtener una instancia)
+    cart = Cart.objects.filter(transaction=tx).first()
+
+    if cart:
+        print(f"Carrito encontrado: {cart.id}")
+        
+        # Obtener items del carrito (ahora correcto al tener una instancia)
+        cart_items = cart.cart_items.all().select_related('product')
+        
+        # 1. Crear OrderItems para el historial
+        for item in cart_items:
+            OrderItem.objects.create(
+                transaction=tx,
+                product=item.product,
+                quantity=item.quantity,
+                price_at_sale=item.product.amount_usd,
+                status='pending'  # Estado inicial
+            )
+
+            # 2. Actualizar stock del producto
+            product = item.product
+            product.quantity = max(product.quantity - item.quantity, 0)
+            product.save()
+
+        # 3. Marcar carrito como inactivo y limpiar items
+        cart.is_active = False
+        cart.clear_items()
+        cart.save()
+        print(f"Carrito {cart.id} procesado y desactivado")
+        
+        # Calcular amount_usd basado en los productos del carrito
+        total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)
+        tx.amount_usd = total_usd
+        
+        # Marcar la transacción como pendiente porque aún no se ha confirmado en la blockchain
+        # tx.status = 'pending'
+    else:
+        print("No se encontró carrito asociado a esta transacción")
+
     tx.save()
 
     return Response({
         "success": True,
         "message": "Transacción actualizada exitosamente",
         "hash": transaction_hash,
+        "transaction_id": tx.id,
     })
-
 
 
 @api_view(["DELETE"])
@@ -340,7 +361,7 @@ def get_cart(request, wallet_address):
     try:
         profile = UserProfile.objects.get(wallet_address=wallet)
         cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
-        serializer = CartSerializer(cart)
+        serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
     except UserProfile.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -356,7 +377,7 @@ def save_cart(request):
     try:
         profile = UserProfile.objects.get(wallet_address=wallet)
         cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
-        serializer = CartSerializer(cart, data=request.data, partial=False)
+        serializer = CartSerializer(cart, data=request.data, partial=False, context={'request': request})
         if serializer.is_valid():
             serializer.save(user=profile)
             return Response(serializer.data)

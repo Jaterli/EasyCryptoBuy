@@ -69,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }))
       };
 
-      console.log("Intentando guardar carrito...");
+      console.log("Procediendo al guardado del carrito...");
       try {
         await axiosUserAPI.saveCart(payload);
       } catch (error) {
@@ -77,7 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })();
 
-  }, [cart, address, cartError]);
+  }, [cart, address]);
 
 
   // Operaciones del carrito
@@ -135,7 +135,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadCart = async () => {
       if (!address || !isWalletRegistered) return;
-      console.log("isWalletRegistered: ", isWalletRegistered);
       console.log("Cargando carrito...")
       // Si existe carrito local y no hay carrito cargado aún desde backend
       const guestCartString = localStorage.getItem("guest_cart");
@@ -160,7 +159,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-
       setCartLoading(true);
       setCartError(false);
       try {
@@ -169,10 +167,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data?.cart_items)) {
           const restored = data.cart_items.map((cart_item: ApiCartItem) => ({
             product: {
-              id: cart_item.product_id,
-              name: cart_item.product_name,
-              description: cart_item.product_description,
-              amount_usd: cart_item.product_price
+              id: cart_item.product.id,
+              name: cart_item.product.name,
+              description: cart_item.product.description,
+              amount_usd: cart_item.product.amount_usd
             },
             quantity: cart_item.quantity
           }));
@@ -182,12 +180,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("Carrito vacío.");
           setCart([]);
           if (data.error) {
-            console.error("Error cargando carrito:", data.error);
+            console.error("Error al cargar el carrito: ", data.error);
             setCartError(true);
           }
         }
       } catch (err) {
-        console.error("Error cargando carrito:", err);
+        console.error("Error al cargar el carrito: ", err);
         setCartError(true);
         setCart([]);
       } finally {
