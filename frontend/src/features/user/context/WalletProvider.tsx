@@ -25,14 +25,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const checkWalletRegistration = useCallback(async () => {
-    if (!address) return;
+    if (!address) return; 
     setIsLoading(true);
 
     try {
       const response = await axiosUserAPI.checkWallet(address);
-      setIsWalletRegistered(response.data.isRegistered);
-    } catch (error) {
-      console.error("Registration check error:", error);
+      if (response.data.success){
+        setIsWalletRegistered(response.data.isRegistered);
+      } else {
+        console.error("Error checking wallet registration:", response.data.error);  
+      }
+    } catch (err) {
+      console.error("Registration check error:", err);
       setIsWalletRegistered(false);
     } finally {
       setIsLoading(false);
@@ -49,8 +53,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const result = await authenticateWallet(address);
       setIsAuthenticated(result.success);
       return result.success;
-    } catch (error) {
-      console.error("Authentication error:", error);
+    } catch (err) {
+      console.error("Authentication error:", err);
       setIsAuthenticated(false);
       return false;
     } finally {
@@ -70,21 +74,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleWalletChange = async () => {
       if (!address) {
+        console.warn("No wallet address found, disconnecting...");
         disconnectWallet();
         return;
       }
 
       try {
         setIsLoading(true);
+        console.log("Checking wallet registration for address:", address);
         await checkWalletRegistration();
         
         const storedToken = localStorage.getItem('userToken');
         if (!storedToken) {
+          console.warn("No token found in localStorage, disconnecting...");
           setIsAuthenticated(false);
           return;
         }
 
         try {
+          console.log("Verifying token:", storedToken);
           const verifyResponse = await axiosUserAPI.verifyToken(storedToken);
           const isValid = verifyResponse.data.valid && 
                          verifyResponse.data.wallet.toLowerCase() === address.toLowerCase();
@@ -95,19 +103,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             console.error("Token inválido o no coincide con la wallet");
             disconnectWallet();
           }
-        } catch (error) {
-          console.error("Token verification failed:", error);
+        } catch (err) {
+          console.error("Token verification failed:", err);
           setIsAuthenticated(false);
           disconnectWallet();
         }
-      } catch (error) {
-        console.error("Error during wallet change:", error);
+      } catch (err) {
+        console.error("Error during wallet change:", err);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
-
     handleWalletChange();
   }, [address, checkWalletRegistration, disconnectWallet]);
 

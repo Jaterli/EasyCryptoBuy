@@ -18,6 +18,7 @@ import { createListCollection } from '@ark-ui/react';
 import { authCompanyAPI } from '../services/companyApi';
 import { toaster } from "@/shared/components/ui/toaster";
 import { FaCopy, FaEye } from 'react-icons/fa';
+import TruncateAddress from '@/shared/components/TruncatedAddress';
 
 const itemsPerPageOptions = createListCollection({
   items: [
@@ -85,11 +86,7 @@ export function SalesHistory() {
           setTransactions([]);
         }
       } catch (err) {
-        let errorMessage = "Ocurrió un error al cargar las transacciones";
-        if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-        setError(errorMessage);         
+        setError(err instanceof Error ? err.message : "Error al cargar transacciones");
       } finally {
         setIsLoading(prev => ({...prev, transactions: false}));
       }
@@ -131,7 +128,7 @@ export function SalesHistory() {
 
   return (
     <Box p={{ base: 3, md: 5 }}>
-      <Heading size="lg" mb={6}>Panel de Transacciones</Heading>
+      <Heading size="lg" mb={6}>Historial de Transacciones</Heading>
       
       <Box mb={6}>
         <Text fontWeight="medium" mb={2}>Filtrar por:</Text>
@@ -208,13 +205,6 @@ export function SalesHistory() {
         )}
       </Box>
 
-      {error && (
-        <Alert.Root status="error" mb={4}>
-          <Alert.Indicator />
-          <Alert.Title>{error}</Alert.Title>
-        </Alert.Root>
-      )}
-
       {/* Información del usuario seleccionado */}
       {filterOption === 'user' && selectedUser && (
         <Box mb={6} p={4} bg={{ _dark: "blue.900", base: "blue.100" }} fontSize='sm' borderRadius="md">
@@ -227,12 +217,18 @@ export function SalesHistory() {
       )}
 
       {/* Listado de transacciones */}
-      {isLoading.transactions ? (
+
+      {error ? (
+        <Alert.Root status="error" mb={4}>
+          <Alert.Indicator />
+          <Alert.Title>{error}</Alert.Title>
+        </Alert.Root>
+      ) : isLoading.transactions ? (
         <Flex justify="center" py={10}>
           <Spinner size="xl" />
         </Flex>
       ) : transactions.length === 0 ? (
-        <Alert.Root status="warning">
+        <Alert.Root status="info">
           <Alert.Indicator />
           <Alert.Title>
             {filterOption === 'all' 
@@ -247,7 +243,6 @@ export function SalesHistory() {
               <Table.Header>
                 <Table.Row>
                   <Table.ColumnHeader>Hash</Table.ColumnHeader>
-                  <Table.ColumnHeader>Token</Table.ColumnHeader>
                   <Table.ColumnHeader>Monto</Table.ColumnHeader>
                   <Table.ColumnHeader>Estado</Table.ColumnHeader>
                   <Table.ColumnHeader>Fecha</Table.ColumnHeader>
@@ -257,7 +252,7 @@ export function SalesHistory() {
               <Table.Body>
                 {currentTransactions.map((tx) => (
                   <Table.Row key={tx.transaction_hash}>
-                    <Table.Cell maxW={"250px"} truncate>{tx.transaction_hash}
+                    <Table.Cell truncate><TruncateAddress address={tx.transaction_hash} />
                       <IconButton
                           aria-label="Copiar hash"                                 
                           size="xs"
@@ -267,8 +262,7 @@ export function SalesHistory() {
                           <FaCopy />
                       </IconButton>
                     </Table.Cell>
-                    <Table.Cell>{tx.token}</Table.Cell>
-                    <Table.Cell>{Number(tx.amount).toFixed(2)}</Table.Cell>
+                    <Table.Cell>{Number(tx.amount).toFixed(2)} {tx.token} / {tx.amount_usd} USD</Table.Cell>
                     <Table.Cell
                       color={
                         tx.status === 'confirmed' ? 'green.600' :

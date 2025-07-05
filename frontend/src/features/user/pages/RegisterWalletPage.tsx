@@ -23,7 +23,6 @@ const RegisterWalletPage = () => {
     }
   }, [isWalletRegistered, navigate]);
 
-
   return (    
     <Box p={6} textAlign="center">
         <VStack spaceY={6}>

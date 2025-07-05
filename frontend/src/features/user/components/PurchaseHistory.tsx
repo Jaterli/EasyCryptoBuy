@@ -9,12 +9,13 @@ import {
   createListCollection,
   Stack,
   Heading,
+  Alert,
 } from '@chakra-ui/react';
-import WalletAddress from '@/shared/components/TruncatedAddress';
 import { Transaction } from '@/shared/types/types';
 import TransactionData from "./TransactionData";
 import { authUserAPI } from '../services/userApi';
 import { useWallet } from '@/features/user/hooks/useWallet';
+import TruncateAddress from '@/shared/components/TruncatedAddress';
 
 const itemsPerPageOptions = createListCollection({
   items: [
@@ -29,6 +30,7 @@ export function PurchaseHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [ error, setError ] = useState<string | null>(null);
   const { address } = useWallet();
    
   useEffect(() => {
@@ -40,8 +42,8 @@ export function PurchaseHistory() {
         setTransactions(response.data.transactions);
         setCurrentPage(1);
       })
-      .catch(() => {
-        setTransactions([]);
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Error al cargar transacciones");        
       })
       .finally(() => {
         setIsLoading(false);
@@ -59,10 +61,15 @@ export function PurchaseHistory() {
    return (
     <Box p={{ base: 3, md: 6 }}>
 
-      <Heading marginBottom="4">Historial de compras de la Wallet: {address ? <WalletAddress address={address} /> : "No conectado"}</Heading>
-      
+      <Heading marginBottom="4">Historial de compras. Wallet: {address ? <TruncateAddress address={address} /> : "No conectada"}</Heading>
+            
       {isLoading ? (
         <Text>Cargando transacciones...</Text>
+      ) : error ? (
+        <Alert.Root status="error" mb={4}>
+          <Alert.Indicator />
+          <Alert.Title>{error}</Alert.Title>
+        </Alert.Root>
       ) : transactions.length === 0 ? (
         <Text>No se encontraron transacciones.</Text>
       ) : (

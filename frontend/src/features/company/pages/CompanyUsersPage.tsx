@@ -10,7 +10,8 @@ import {
   Select,
   Portal,
   Spinner,
-  Center
+  Center,
+  Alert
 } from "@chakra-ui/react";
 import { FaUser } from "react-icons/fa";
 import { authCompanyAPI } from "../services/companyApi";
@@ -30,6 +31,7 @@ export const CompanyUsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -48,11 +50,10 @@ export const CompanyUsersPage: React.FC = () => {
           setCurrentPage(1);
         }        
       } else {
-        setUsers([]);
+        setError(response.error || "Ocurrió un error al cargar los usuarios.");
       }
     } catch (error) {
-      console.error("Error loading users:", error);
-      setUsers([]);
+      setError(error instanceof Error ? error.message : "Error al cargar los usuarios");
     } finally {
       setIsLoading(false);
     }
@@ -72,9 +73,14 @@ export const CompanyUsersPage: React.FC = () => {
         <Center py={10}>
           <Spinner size="xl" color="blue.500" />
         </Center>
+      ) : error ? (
+        <Alert.Root status="error" mb={4}>
+          <Alert.Indicator />
+          <Alert.Title>{error}</Alert.Title>
+        </Alert.Root>
       ) : users.length === 0 ? (
         <Text fontSize="md" color="gray.500" textAlign="center" py={6}>
-          No hay usuarios registrados aún.
+          No hay usuarios registrados.
         </Text>
       ) : (
         <>

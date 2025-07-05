@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, Grid, Button } from "@chakra-ui/react";
+import { Box, Heading, Grid, Button, Alert } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { ProductCard } from "../components/ProductCard";
@@ -40,7 +40,12 @@ export const ProductCatalogPage = () => {
   }
 
   if (error) {
-    return <Box padding="6">Error: {error}</Box>;
+    return (
+    <Alert.Root status="error" mb={4}>
+      <Alert.Indicator />
+      <Alert.Title>{error}</Alert.Title>
+    </Alert.Root>
+    )
   }
 
 

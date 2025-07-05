@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Flex, Spinner, Center, Text } from '@chakra-ui/react';
+import { Box, Flex, Spinner, Center, Alert } from '@chakra-ui/react';
 import { KpiCards } from './KpiCards';
 import { TransactionChart } from './TransactionChart';
 import { TopProducts } from './TopProducts';
@@ -18,13 +18,11 @@ export function CompanyDashboard() {
         const response = await authCompanyAPI.getCompanyDashboard();
         setDashboardData(response);
       } catch (err) {
-        console.error("Error cargando el dashboard:", err);
-        setError("Error al cargar los datos del dashboard.");
+        setError(err instanceof Error ? err.message : 'Error al cargar los datos del dashboard' );
       } finally {
         setLoading(false);
       }
     };
-
     fetchDashboardData();
   }, []);
 
@@ -38,15 +36,16 @@ export function CompanyDashboard() {
 
   if (error) {
     return (
-      <Center minH="300px">
-        <Text color="red.500">{error}</Text>
-      </Center>
+      <Alert.Root status="error" mb={4}>
+        <Alert.Indicator />
+        <Alert.Title>{error}</Alert.Title>
+      </Alert.Root>
     );
   }
 
-if (!dashboardData){
-  return ""
-}
+  if (!dashboardData){
+    return ""
+  }
 
   return (
     <Box p={{ base: 3, md: 5 }}>

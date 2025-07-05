@@ -21,7 +21,7 @@ import formatScientificToDecimal from "@/shared/utils/formatScientificToDecimal"
 import { Transaction } from '@/shared/types/types';
 import { PurchaseSummary } from './PurchaseSummary';
 import { useDisclosure } from '@chakra-ui/react';
-import WalletAddress from '@/shared/components/TruncatedAddress';
+import TruncateAddress from '@/shared/components/TruncatedAddress';
 
 interface TransactionDataProps {
   tx: Transaction;
@@ -88,7 +88,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
               <Dialog.Header>
                 <Dialog.Title>
                     <Text>Detalles de la Transacción</Text>
-                    <Text fontSize={'0.9em'} fontWeight={'normal'}><WalletAddress address={tx.transaction_hash} /></Text>
+                    <Text fontSize={'0.9em'} fontWeight={'normal'}><TruncateAddress address={tx.transaction_hash} /></Text>
                 </Dialog.Title>
                 <Dialog.CloseTrigger asChild>
                   <CloseButton size="sm" />

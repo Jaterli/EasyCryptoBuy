@@ -16,6 +16,7 @@ import {
   createListCollection,
   Center,
   Spinner,
+  Alert,
 } from "@chakra-ui/react";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
@@ -42,7 +43,8 @@ export const ProductList: React.FC = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentProducts = products.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(products.length / itemsPerPage);
-
+  const [error, setError] = useState<string | null>(null);
+  
   const loadProducts = async () => {
     setIsLoading(true);
     try{ 
@@ -54,7 +56,7 @@ export const ProductList: React.FC = () => {
         setCurrentPage(1);
       }
     } catch(err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Error al cargar los productos");
     } finally {
       setIsLoading(false);
    }   
@@ -145,11 +147,16 @@ export const ProductList: React.FC = () => {
           <FaPlus />
           </IconButton>
       </Flex>
-
+      
       {isLoading ? (
         <Center py={10}>
           <Spinner size="xl" color="blue.500" />
         </Center>
+      ) : error ? (
+        <Alert.Root status="error" mb={4}>
+          <Alert.Indicator />
+          <Alert.Title>{error}</Alert.Title>
+        </Alert.Root>
       ) : products.length === 0 ? (
         <Text fontSize="md" color="gray.500" textAlign="center" py={6}>
           No se han encontrado productos.

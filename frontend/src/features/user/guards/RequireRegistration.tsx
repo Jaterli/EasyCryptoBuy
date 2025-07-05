@@ -20,7 +20,6 @@ const RequireRegistration = ({ children }: RequireRegistrationProps) => {
       navigate("/register-wallet", { state: { from: location.pathname } });
     }
 
-
   }, [isWalletRegistered, isConnected, isLoading, navigate, location.pathname]);
  
   if (!isWalletRegistered){
