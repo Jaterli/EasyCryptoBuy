@@ -1,13 +1,7 @@
 import { Card, Heading, Table, Badge } from '@chakra-ui/react';
 import { format } from 'date-fns';
-export function RecentTransactions({ transactions }: { transactions: Array<{
-  id: number;
-  wallet_address: string;
-  amount: number;
-  token: string;
-  status: string;
-  created_at: string;
-}> }) {
+import { DashboardDataType } from '@/shared/types/types';
+export function RecentTransactions({ transactions }: { transactions: DashboardDataType["recent_transactions"] }) {
   const statusColors = {
     pending: 'yellow',
     confirmed: 'green',
@@ -30,7 +24,7 @@ export function RecentTransactions({ transactions }: { transactions: Array<{
           {transactions.map(tx => (
             <Table.Row key={tx.id}>
               <Table.Cell>{tx.wallet_address.slice(0, 6)}...{tx.wallet_address.slice(-4)}</Table.Cell>
-              <Table.Cell>{tx.amount} {tx.token}</Table.Cell>
+              <Table.Cell>{tx.amount} {tx.token} / {tx.amount_usd} USD</Table.Cell>
               <Table.Cell>
                 <Badge colorPalette={statusColors[tx.status as keyof typeof statusColors]}>
                   {tx.status}

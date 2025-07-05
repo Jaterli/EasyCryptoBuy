@@ -93,6 +93,7 @@ def get_transactions_by_wallet(request, wallet_address):
                 'id': transaction.id,
                 'wallet_address': transaction.wallet_address,
                 'amount': transaction.amount,
+                'amount_usd': transaction.amount_usd,
                 'status': transaction.status,
                 'transaction_hash': transaction.transaction_hash,
                 'created_at' : transaction.created_at,
@@ -109,7 +110,7 @@ def get_transactions_by_wallet(request, wallet_address):
 def get_all_transactions(request):
 
     try:
-        transactions = Transaction.objects.select_related('cart__user').order_by('-created_at')
+        transactions = Transaction.objects.all().order_by('-created_at')
 
     except Transaction.DoesNotExist:
         return Response({"success": False, "error": "No se han encontrado transacciones."}, status=status.HTTP_404_NOT_FOUND)
@@ -120,6 +121,7 @@ def get_all_transactions(request):
                 'id': transaction.id,
                 'wallet_address': transaction.wallet_address,
                 'amount': transaction.amount,
+                'amount_usd': transaction.amount_usd,
                 'status': transaction.status,
                 'transaction_hash': transaction.transaction_hash,
                 'created_at' : transaction.created_at,
@@ -171,7 +173,7 @@ def company_dashboard(request):
 
     # 3. Transacciones recientes (últimas 10 confirmadas)
     recent_transactions = Transaction.objects.select_related('cart__user').order_by('-created_at')[:10].values(
-        'id', 'wallet_address', 'amount', 'token', 'status', 'created_at'
+        'id', 'wallet_address', 'amount', 'amount_usd', 'token', 'status', 'created_at'
     )
 
     # 4. Datos para gráfico de transacciones (últimos 7 días)
@@ -181,7 +183,7 @@ def company_dashboard(request):
     ).annotate(
         day=TruncDay('created_at')
     ).values('day').annotate(
-        daily_amount=Sum('amount'),
+        daily_amount=Sum('amount_usd'),
         transaction_count=Count('id')
     ).order_by('day')
 
@@ -204,6 +206,7 @@ def company_dashboard(request):
                 'id': t['id'],
                 'wallet_address': t['wallet_address'],
                 'amount': float(t['amount']),
+                'amount_usd': float(t['amount_usd']),
                 'token': t['token'],
                 'status': t['status'],
                 'created_at': t['created_at']
@@ -212,8 +215,8 @@ def company_dashboard(request):
         ],
         'transaction_trend': [
             {
-                'date': t['day'],
-                'amount': float(t['daily_amount']),
+                'date': t['day'].strftime('%d-%m-%Y'),
+                'amount_usd': float(t['daily_amount']),
                 'count': t['transaction_count']
             }
             for t in transaction_trend

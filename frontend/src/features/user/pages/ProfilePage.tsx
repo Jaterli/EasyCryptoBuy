@@ -18,7 +18,7 @@ import { useForm } from 'react-hook-form';
 import { useWallet } from '@/features/user/hooks/useWallet';
 import { authUserAPI } from "@/features/user/services/userApi";
 import { UserProfile, UpdateProfileData } from "@/shared/types/types";
-import WalletAddress from '@/shared/components/TruncatedAddress';
+import TruncateAddress from '@/shared/components/TruncatedAddress';
 
 
 export default function ProfilePage() {
@@ -119,10 +119,10 @@ export default function ProfilePage() {
 
   if (customError) {
     return (
-        <Alert.Root status="error" mb={4}>
-            <Alert.Indicator />
-            <Alert.Title>{customError}</Alert.Title>
-        </Alert.Root>
+      <Alert.Root status="error" mb={4}>
+          <Alert.Indicator />
+          <Alert.Title>{customError}</Alert.Title>
+      </Alert.Root>
     );
   }
 
@@ -146,7 +146,7 @@ export default function ProfilePage() {
             <Fieldset.Content>
               <Field.Root invalid={!!errors.name}>
               <Field.Label>Wallet</Field.Label>
-              <Text fontSize={'0.95em'}><WalletAddress address={address} /></Text>
+              <Text fontSize={'0.95em'}><TruncateAddress address={address} /></Text>
               </Field.Root>
               <Field.Root invalid={!!errors.name}>
                 <Field.Label>Nombre completo</Field.Label>

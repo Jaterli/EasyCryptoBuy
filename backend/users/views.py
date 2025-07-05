@@ -218,7 +218,7 @@ def register_wallet(request):
 def check_wallet(request, wallet_address):
     if request.method == 'GET':
         if not wallet_address:
-            return JsonResponse({'success': False, 'message': 'La dirección de la wallet es obligatoria.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'La dirección de la wallet es obligatoria.'}, status=400)
 
         is_registered = UserProfile.objects.filter(wallet_address=wallet_address).exists()
         return JsonResponse({'success': True, 'isRegistered': is_registered})

@@ -20,7 +20,7 @@ import { ColorModeButton } from "@/shared/components/ui/color-mode";
 import { NavLink } from "react-router-dom";
 import { FaShoppingCart, FaPlug, FaPowerOff, FaWallet, FaBars } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
-import WalletAddress from "@/shared/components/TruncatedAddress";
+import TruncateAddress from "@/shared/components/TruncatedAddress";
 
 export function Navbar() {
   const { address, isConnected, disconnectWallet } = useWallet();
@@ -83,7 +83,7 @@ export function Navbar() {
                   <Menu.Item value="address" disabled>
                     <VStack align="flex-start" gap={1}>
                       <Text fontSize="xs" opacity={0.7}>Tu dirección:</Text>
-                      <WalletAddress address={address} />
+                      <TruncateAddress address={address} />
                     </VStack>
                   </Menu.Item>
                 </Menu.ItemGroup>
@@ -148,7 +148,7 @@ export function Navbar() {
                     <>
                     <HStack gap={2}>
                         <FaWallet />
-                        <WalletAddress address={address} />
+                        <TruncateAddress address={address} />
                     </HStack>
                     </>
                   )}

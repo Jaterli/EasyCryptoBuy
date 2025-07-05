@@ -41,7 +41,7 @@ export function Payment() {
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
-  const [checkPendingTx, setChekPendingTx] = useState<boolean>(false);
+  // const [checkPendingTx, setChekPendingTx] = useState<boolean>(false);
   const [transactionData, setTransaction] = useState<Transaction | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
@@ -221,24 +221,24 @@ export function Payment() {
   }, [cart]);
 
   // Chequeamos si hay transacciones anteriores que no se marcaron como confirmed
-  useEffect(() => {
-    if (address){
-      const checkForPendingTx = async  () => {
-        try {
-          const { data } = await axiosUserAPI.checkPendingTransactions(address);       
-          if (data.success) {
-            setChekPendingTx(data.has_pending);
-            return;
-          } else {
-            console.error("Error checking pending transactions:", data.message);
-          }
-        } catch (err) {
-          console.error("Error verificando transacciones pendientes:", err);
-        }
-      };
-      checkForPendingTx();
-    }
-  },[address]);
+  // useEffect(() => {
+  //   if (address){
+  //     const checkForPendingTx = async  () => {
+  //       try {
+  //         const { data } = await axiosUserAPI.checkPendingTransactions(address);       
+  //         if (data.success) {
+  //           setChekPendingTx(data.has_pending);
+  //           return;
+  //         } else {
+  //           console.error("Error checking pending transactions:", data.message);
+  //         }
+  //       } catch (err) {
+  //         console.error("Error verificando transacciones pendientes:", err);
+  //       }
+  //     };
+  //     checkForPendingTx();
+  //   }
+  // },[address]);
 
   // 2. Actualización y obtención de detalles de transacción
   useEffect(() => {

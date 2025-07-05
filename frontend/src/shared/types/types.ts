@@ -62,6 +62,7 @@ export interface Transaction {
   transaction_hash: string;
   wallet_address: string;    
   amount: number;
+  amount_usd: number;
   token: string;
   status: string;
   created_at: string;
@@ -117,17 +118,10 @@ export interface DashboardDataType {
     token: string;
     revenue: number;
   }>;
-  recent_transactions: Array<{
-    id: number;
-    wallet_address: string;
-    amount: number;
-    token: string;
-    status: string;
-    created_at: string;
-  }>;
+  recent_transactions: Array<Transaction>;
   transaction_trend: Array<{
     date: string;
-    amount: number;
+    amount_usd: number;
     count: number;
   }>;
 };
