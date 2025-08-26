@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-@p_v5a)9#nvf@i8gs481!)lqti*5^0r%rumsub$ri$z(5&^pqv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['easycryptobuy.jaterli.com', 'www.easycryptobuy.jaterli.com', 'localhost']
 
 
 # Application definition
@@ -159,6 +159,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+
+MEDIA_ROOT = BASE_DIR / 'media'
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_DIRS = [
+    BASE_DIR.parent / "react-frontend/dist",  # Ruta a los archivos generados por Vite
+]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
