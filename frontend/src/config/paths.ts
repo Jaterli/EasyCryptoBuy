@@ -1,9 +1,9 @@
-const API_BASE = "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const API_PATHS = {
-  base: API_BASE,
-  accounts: `${API_BASE}/api/accounts`,
-  company: `${API_BASE}/api/company`,
-  users: `${API_BASE}/api/users`,
-  payments: `${API_BASE}/api/payments`,
+  base: API_URL,
+  accounts: `${API_URL}/accounts`,
+  company: `${API_URL}/company`,
+  users: `${API_URL}/users`,
+  payments: `${API_URL}/payments`,
 };

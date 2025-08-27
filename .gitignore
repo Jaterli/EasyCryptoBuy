@@ -29,6 +29,9 @@ db.sqlite3
 
 # Configuración de credenciales y variables de entorno
 .env
+.env.development
+.env.*.development
+
 *.pem
 config/settings_local.py  # Si usas un archivo local de configuración
 
