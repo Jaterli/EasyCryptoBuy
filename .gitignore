@@ -23,9 +23,9 @@ dist-ssr
 *.local
 
 # Bases de datos locales
-*.sqlite3
-db.sqlite3
-.DS_Store
+# *.sqlite3
+# db.sqlite3
+# .DS_Store
 
 # Configuración de credenciales y variables de entorno
 .env
@@ -54,3 +54,8 @@ config/settings_local.py  # Si usas un archivo local de configuración
 *.swn
 Thumbs.db
 desktop.ini
+
+
+# Archivos en desuso
+_*.tsx
+_*.ts
