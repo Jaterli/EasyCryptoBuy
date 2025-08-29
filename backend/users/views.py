@@ -49,6 +49,7 @@ def wallet_auth(request):
         return Response({'success': False, 'error': 'Missing authentication data'}, status=400)
 
     try:
+        wallet = wallet.lower()
         # Verificar wallet
         if not Web3.is_address(wallet):
             return Response({'success': False, 'error': 'Invalid wallet address'}, status=400)
@@ -90,7 +91,7 @@ def wallet_auth(request):
             signature=HexBytes(signature)
         )
         
-        if recovered_addr != wallet:
+        if recovered_addr.lower() != wallet:
             return Response({'success': False, 'error': 'Signature verification failed'}, status=401)
             
         # Verificar dominio si es necesario
