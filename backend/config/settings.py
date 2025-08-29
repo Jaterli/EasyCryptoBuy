@@ -85,10 +85,11 @@ SIMPLE_JWT = {
 }
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # Caché en memoria
-        'LOCATION': 'redis://127.0.0.1:6379/1',  # Usar Redis si está disponible
-        #'LOCATION': 'unique-snowflake',
+    'default': {        
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache', # Usar Redis como backend de caché
+        "LOCATION": "redis://127.0.0.1:6379/1", # Dirección del servidor Redis
+		#'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', # Usar caché en memoria local       
+        #'LOCATION': 'unique-snowflake', # Nombre único para la caché en memoria local
     }
 }
 
