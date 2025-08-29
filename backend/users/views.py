@@ -41,7 +41,7 @@ def get_wallet_nonce(request, wallet_address):
 @api_view(['POST'])
 @permission_classes([AllowAny]) 
 def wallet_auth(request):
-    wallet = request.data.get('wallet_address', '').lower()
+    wallet = request.data.get('wallet_address', '')
     signature = request.data.get('signature')
     signed_message = request.data.get('message')
     
@@ -75,8 +75,8 @@ def wallet_auth(request):
             return Response({'success': False, 'error': 'Message expired'}, status=400)
             
         # Verificar nonce en caché
-        cached_nonce = cache.get(f"wallet_nonce_{wallet}")
-        logger.warning(f"Buscando nonce en clave: wallet_nonce_{wallet.lower()} - esperado: {cached_nonce}, recibido: {nonce}")
+        cached_nonce = cache.get(f"wallet_nonce_{wallet.lower()}")
+        logger.warning(f"Buscando nonce en clave: wallet_nonce_{wallet} - esperado: {cached_nonce}, recibido: {nonce}")
 
         if cached_nonce != nonce:
             logger.warning(f"Invalid nonce for {wallet}: cached={cached_nonce}, received={nonce}")
