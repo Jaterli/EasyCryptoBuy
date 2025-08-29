@@ -25,7 +25,7 @@ export const AppUser = () => {
       <CartProvider>
         <AuthDialogProvider> 
         <Navbar />
-        <Box minH={minHeight} py={{ base: 4, md: 10 }}>
+        <Box minH={minHeight} pt={{ base: 4, md: 10 }} pb={"100px"}>
           <Container px={{ base: 0, md: 4, lg: 8 }} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
             <Routes>
               <Route path="/dashboard" element={<Home />} />

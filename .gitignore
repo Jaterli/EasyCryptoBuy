@@ -57,5 +57,7 @@ desktop.ini
 
 
 # Archivos en desuso
-_*.tsx
-_*.ts
+src/**/_*.ts
+src/**/_*.tsx
+src/**/_*.js
+src/**/_*.jsx
