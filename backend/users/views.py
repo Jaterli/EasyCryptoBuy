@@ -75,8 +75,9 @@ def wallet_auth(request):
             return Response({'success': False, 'error': 'Message expired'}, status=400)
             
         # Verificar nonce en caché
-        logger.warning(f"Buscando nonce en clave: wallet_nonce_{wallet.lower()} - esperado: {cached_nonce}, recibido: {nonce}")
         cached_nonce = cache.get(f"wallet_nonce_{wallet}")
+        logger.warning(f"Buscando nonce en clave: wallet_nonce_{wallet.lower()} - esperado: {cached_nonce}, recibido: {nonce}")
+
         if cached_nonce != nonce:
             logger.warning(f"Invalid nonce for {wallet}: cached={cached_nonce}, received={nonce}")
             return Response({'success': False, 'error': 'Invalid or expired nonce'}, status=401)
