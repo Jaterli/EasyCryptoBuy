@@ -15,6 +15,28 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Determinar entorno por variable de sistema, por defecto 'development'
+ENV = os.getenv("ENVIRONMENT", "development")
+
+if ENV == "production":
+    load_dotenv(".env.production")
+else:
+    load_dotenv(".env.development")
+
+
+DEBUG = os.getenv("DEBUG", "False") == "True"
+WEB3_PROVIDER = os.getenv('WEB3_PROVIDER')
+WEB3_WS_PROVIDER = os.getenv('WEB3_WS_PROVIDER')
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+PAYMENT_CONTRACT_ADDRESS = os.getenv('PAYMENT_CONTRACT_ADDRESS')
+TOKEN_ADDRESSES = {
+    'USDC': os.getenv('USDC_ADDRESS'),
+    'USDT': os.getenv('USDT_ADDRESS'),
+    'LINK': os.getenv('LINK_ADDRESS'),
+    'ETH': os.getenv('ETH_ADDRESS'),
+}
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -84,14 +106,20 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-CACHES = {
-    'default': {        
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache', # Usar Redis como backend de caché
-        "LOCATION": "redis://127.0.0.1:6379/1", # Dirección del servidor Redis
-		#'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', # Usar caché en memoria local       
-        #'LOCATION': 'unique-snowflake', # Nombre único para la caché en memoria local
+if ENV == "production":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",
+        }
     }
-}
+else:  # desarrollo por defecto
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
 
 
 ROOT_URLCONF = 'config.urls'
@@ -189,25 +217,6 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'DEBUG',
     },
-}
-
-
-load_dotenv()
-DEBUG = os.getenv("DEBUG") == "True"  # Convertir a booleano
-
-WEB3_PROVIDER = os.getenv('WEB3_PROVIDER')
-
-WEB3_WS_PROVIDER = os.getenv('WEB3_WS_PROVIDER')
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-PAYMENT_CONTRACT_ADDRESS = os.getenv('PAYMENT_CONTRACT_ADDRESS')
-
-TOKEN_ADDRESSES = {
-    'USDC': os.getenv('USDC_ADDRESS'),
-    'USDT': os.getenv('USDT_ADDRESS'),
-    'LINK': os.getenv('LINK_ADDRESS'),
-    'ETH': os.getenv('ETH_ADDRESS'),
 }
 
 PAYMENT_CONTRACT_ABI = [
