@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-@p_v5a)9#nvf@i8gs481!)lqti*5^0r%rumsub$ri$z(5&^pqv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['easycryptobuy.jaterli.com', 'www.easycryptobuy.jaterli.com', 'localhost']
+ALLOWED_HOSTS = ['easycryptobuy.jaterli.com', 'www.easycryptobuy.jaterli.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -87,7 +87,8 @@ SIMPLE_JWT = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # Caché en memoria
-        'LOCATION': 'unique-snowflake',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Usar Redis si está disponible
+        #'LOCATION': 'unique-snowflake',
     }
 }
 
