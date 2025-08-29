@@ -32,7 +32,7 @@ def get_wallet_nonce(request, wallet_address):
         
     nonce = str(uuid.uuid4())
     # Guardar el nonce temporalmente (5 min) asociado a la wallet
-    cache.set(f"wallet_nonce_{wallet_address}", nonce, timeout=300)
+    cache.set(f"wallet_nonce_{wallet_address.lower()}", nonce, timeout=300)
     logger.error(f"Nonce cacheado: {nonce}")
 
     return Response({'nonce': nonce})
@@ -41,7 +41,7 @@ def get_wallet_nonce(request, wallet_address):
 @api_view(['POST'])
 @permission_classes([AllowAny]) 
 def wallet_auth(request):
-    wallet = request.data.get('wallet_address', '')
+    wallet = request.data.get('wallet_address', '').lower()
     signature = request.data.get('signature')
     signed_message = request.data.get('message')
     
