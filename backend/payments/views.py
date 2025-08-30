@@ -34,10 +34,19 @@ def register_transaction(request):
     except (TypeError, InvalidOperation):
         return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
-    transaction_hash = wallet_address  # Esto parece un placeholder, se actualizará después
+    # Verificación de si el servicio WEB3_PROVIDER está configurado y funcionando
+    provider_url = getattr(settings, 'WEB3_PROVIDER', None)
+    if not provider_url:
+        return Response({"success": False, "message": "Servicio WEB3_PROVIDER sin servicio"}, status=500)
+
+    web3 = Web3(Web3.HTTPProvider(provider_url))
+    if not web3.is_connected():
+        return Response({"success": False, "message": "No se pudo conectar a la red Ethereum"}, status=500)
+
+    transaction_hash = wallet_address  # Primeramente toma la dirección de la wallet, se actualizará después con el hash real.
 
     if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
-        return Response({"success": False, "message": "Ya hay una transacción pendiente para esta wallet"}, status=409)
+        return Response({"success": False, "message": "Hay una transacción pendiente para esta wallet. Si pasado unos minutos sigue pendiente, contacte con soporte."}, status=409)
 
     try:
         profile = UserProfile.objects.get(wallet_address=wallet_address)
@@ -87,7 +96,7 @@ def update_transaction(request, transaction_id):
     # Verificación de la transacción en blockchain
     provider_url = getattr(settings, 'WEB3_PROVIDER', None)
     if not provider_url:
-        return Response({"success": False, "message": "WEB3_PROVIDER_URL no configurado"}, status=500)
+        return Response({"success": False, "message": "Servicio WEB3_PROVIDER sin servicio"}, status=500)
 
     web3 = Web3(Web3.HTTPProvider(provider_url))
     if not web3.is_connected():

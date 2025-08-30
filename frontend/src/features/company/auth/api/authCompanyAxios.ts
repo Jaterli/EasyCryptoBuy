@@ -60,7 +60,7 @@ companyApi.interceptors.response.use(
         localStorage.removeItem("companyToken");
         localStorage.removeItem("companyRefreshToken");
         localStorage.removeItem("companyUsername");
-        window.location.href = "./company-login";
+        window.location.href = "company-login";
         return Promise.reject(refreshError);
       }
     }
