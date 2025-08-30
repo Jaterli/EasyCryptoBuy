@@ -166,7 +166,7 @@ export function Payment() {
   useEffect(() => {
     if (writeError || writeApproveError) {
       cleanupFailedTransaction();
-      // showToast('error', "Error en transacción", (writeError ? writeError.message : writeApproveError ? writeApproveError.message : 'Error desconocido'));
+      showToast('error', "Error en transacción", (writeError ? writeError.message : writeApproveError ? writeApproveError.message : 'Error desconocido'));
     }
   }, [writeError, writeApproveError]);
 
@@ -274,7 +274,7 @@ export function Payment() {
             throw new Error(detailsResponse.error || "Error al obtener detalles de la transacción");
           }
         } catch (error) {
-          cleanupFailedTransaction();
+          //cleanupFailedTransaction();
           const apiError = error as ApiError;
           const errorMessage = apiError.response ? apiError.response.data.message : "Error desconocido";  
           showToast('error', "Error en el servidor", errorMessage);
@@ -319,8 +319,7 @@ export function Payment() {
   useEffect(() => {
     if (token !== "ETH" && isApproveConfirmed && pendingTx) {
       const executeTokenPayment = async () => {
-        try {
-          
+        try {          
           // Registrar siempre una nueva transacción para tokens no ETH
           const registerResponse = await axiosUserAPI.registerTransaction({
             wallet_address: address!,

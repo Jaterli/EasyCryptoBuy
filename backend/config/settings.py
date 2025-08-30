@@ -15,13 +15,17 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 # Determinar entorno por variable de sistema, por defecto 'development'
 ENV = os.getenv("ENVIRONMENT", "development")
 
 if ENV == "production":
-    load_dotenv(".env.production")
+    load_dotenv(BASE_DIR / ".env.production")
 else:
-    load_dotenv(".env.development")
+    load_dotenv(BASE_DIR / ".env.development")
 
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
@@ -35,10 +39,6 @@ TOKEN_ADDRESSES = {
     'LINK': os.getenv('LINK_ADDRESS'),
     'ETH': os.getenv('ETH_ADDRESS'),
 }
-
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production

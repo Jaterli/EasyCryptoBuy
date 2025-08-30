@@ -95,7 +95,7 @@ def wallet_auth(request):
             return Response({'success': False, 'error': 'Signature verification failed'}, status=401)
             
         # Verificar dominio si es necesario
-        allowed_domains = ["localhost", "easycrypto.jaterli.com"]  # Configurar según necesidad
+        allowed_domains = ["localhost", "easycryptobuy.jaterli.com"]  # Configurar según necesidad
         if domain and allowed_domains and domain not in allowed_domains:
             return Response({'success': False, 'error': 'Unauthorized domain'}, status=403)
             
