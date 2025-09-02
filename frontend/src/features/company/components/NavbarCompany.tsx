@@ -31,7 +31,7 @@ export function NavbarCompany() {
 
     const handleLogout = () => {
         logout();
-        navigate("/company-login");
+        navigate("../company-login");
     };
 
     const NavButton = ({ to, children }: { to: string; children: React.ReactNode }) => (

@@ -20,7 +20,7 @@ async function refreshCompanyToken(): Promise<string> {
 
   try {
     console.log("Intentando refrescar token");
-    const { data } = await companyApi.post("/api/token/refresh/", { refresh });
+    const { data } = await companyApi.post(`${API_PATHS.base}/token/refresh/`, { refresh });
     localStorage.setItem("companyToken", data.access);
     return data.access;
   } catch (error) {
