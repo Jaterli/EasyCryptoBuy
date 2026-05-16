@@ -19,7 +19,7 @@ interface Props {
 
 export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }) => {
   const [product, setProduct] = useState<Product>(
-    initialData || { id: '', name: '', description: '', amount_usd: 0, quantity: 0 }
+    initialData || { id: '', name: '', description: '', amount_usd: 0, quantity: 0, category: '' }
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +60,15 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
             onChange={handleTextareaChange}
             resize="vertical"
             rows={4}
+          />
+        </Field.Root>
+
+        <Field.Root>
+          <Field.Label>Categoría</Field.Label>
+          <Input 
+            name="category" 
+            value={product.category} 
+            onChange={handleInputChange} 
           />
         </Field.Root>
         

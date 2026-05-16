@@ -197,7 +197,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
-    BASE_DIR.parent / "react-frontend/dist",  # Ruta a los archivos generados por Vite
+    BASE_DIR.parent / "frontend/dist",  # Ruta a los archivos generados por Vite
 ]
 
 

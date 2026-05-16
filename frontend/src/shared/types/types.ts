@@ -20,6 +20,7 @@ export interface ApiCartItem {
     name: string;
     description: string;
     amount_usd: number;
+    category: string;
   }
   quantity: number;
 }
@@ -28,6 +29,7 @@ export interface Product {
   id: string;
   name: string;
   description: string;
+  category: string;
   amount_usd: number;
   quantity: number;
 }
