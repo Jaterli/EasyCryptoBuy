@@ -22,7 +22,7 @@ export const AppCompany = () => {
     <CompanyAuthProvider>
       <NavbarCompany />
         <Box minH={minHeight} py={{ base: 4, md: 10 }}>
-          <Container px={{ base: 0, md: 4, lg: 8 }} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
+          <Container px={{ base: 0, md: 4, lg: 8 }} pb={4} maxW={{ base: "100%", md: "container.md", lg: "container.lg", xl: "container.xl" }}>
             <Routes>
               <Route path="/company/" element={<RequireAdminAuth><CompanyDashboard/></RequireAdminAuth>} /> 
               <Route path="/company/company-login" element={<CompanyLoginPage />} /> 

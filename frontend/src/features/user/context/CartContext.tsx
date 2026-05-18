@@ -112,6 +112,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+
+  const updateQuantity = async (productId: string, newQuantity: number) => {
+    if (cartError || !await verifyBeforeCartOperation()) return;
+    
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === productId);
+      if (!existing) return prev;
+      
+      if (newQuantity <= 0) {
+        return prev.filter(item => item.product.id !== productId);
+      }
+      
+      if (newQuantity > existing.product.quantity) {
+        alert(`No puedes agregar más de ${existing.product.quantity} unidades`);
+        return prev.map(item =>
+          item.product.id === productId
+            ? { ...item, quantity: existing.product.quantity }
+            : item
+        );
+      }
+      
+      return prev.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+    });
+  };
+
   const clearCart = async () => {
     if (!address || cartError) return;
     if (!await verifyBeforeCartOperation()) return;
@@ -204,6 +233,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         clearCart,
         setCart,
+        updateQuantity,
         cartLoading,
         setCartLoading,
         cartError

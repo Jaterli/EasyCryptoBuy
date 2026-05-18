@@ -1,4 +1,4 @@
-import { Card, Button, Text, Image } from "@chakra-ui/react";
+import { Card, Button, Text, Image, Box } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { Product } from "@/shared/types/types";
 
@@ -19,13 +19,27 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <Card.Root variant="elevated" width="100%" overflow="hidden">
-      <Image
-        src={`https://picsum.photos/seed/${product.id}/300`} // Mientras no exista image en el modelo product
-        alt={product.name}
-        height="200px"
-        objectFit="cover"
-        width="100%"
-      />
+      {product.image ? (
+        <Image
+          src={product.image}
+          alt={product.name}
+          height="200px"
+          objectFit="cover"
+          width="100%"
+        />
+      ) : (
+        <Box
+          height="200px"
+          width="100%"
+          bg="gray.100"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Text color="gray.400" fontSize="sm">Sin imagen</Text>
+        </Box>
+      )}
+      
       <Card.Body gap="2">
         <Card.Title>{product.name}</Card.Title>
         <Card.Description>{product.description}</Card.Description>

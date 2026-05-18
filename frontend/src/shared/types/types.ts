@@ -3,6 +3,7 @@ export interface CartContextType {
   addToCart: (product: Product) => Promise<void>;
   removeFromCart: (id: string) => Promise<void>;
   clearCart: () => Promise<void>;
+  updateQuantity: (productId: string, newQuantity: number) => Promise<void>;
   setCart: (items: CartItem[]) => void;
   cartLoading: boolean;
   setCartLoading: (loading: boolean) => void;
@@ -21,6 +22,7 @@ export interface ApiCartItem {
     description: string;
     amount_usd: number;
     category: string;
+    image?: string | null;
   }
   quantity: number;
 }
@@ -30,6 +32,7 @@ export interface Product {
   name: string;
   description: string;
   category: string;
+  image?: string | null;
   amount_usd: number;
   quantity: number;
 }

@@ -82,19 +82,29 @@ export const authCompanyAPI = {
     }
   },
 
-  createProduct: (product: Omit<Product, "id">): Promise<void> => {
+  // Modificado: acepta FormData en lugar de Omit<Product, "id">
+  createProduct: async (formData: FormData): Promise<void> => {
     try {
-      return authCompanyAxios.post(`${API_PATHS.company}/products/`, product);
+      await authCompanyAxios.post(`${API_PATHS.company}/products/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
     } catch (err) {
-      throw new Error("Error al crear producto. "+err);
+      throw new Error("Error al crear producto. " + err);
     }
   },
 
-  updateProduct: (id: string, product: Product): Promise<void> => {
+  // Modificado: acepta FormData en lugar de Product
+  updateProduct: async (id: string | number, formData: FormData): Promise<void> => {
     try {
-      return authCompanyAxios.put(`${API_PATHS.company}/products/${id}/`, product);
+      await authCompanyAxios.put(`${API_PATHS.company}/products/${id}/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
     } catch (err) {
-      throw new Error("Error al actualizar producto. "+err);
+      throw new Error("Error al actualizar producto. " + err);
     }
   },
 

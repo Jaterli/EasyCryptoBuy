@@ -17,6 +17,10 @@ import {
   Center,
   Spinner,
   Alert,
+  Input,
+  HStack,
+  VStack,
+  Button,
 } from "@chakra-ui/react";
 import { ProductForm } from "./ProductForm";
 import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
@@ -33,23 +37,47 @@ const itemsPerPageOptions = createListCollection({
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { open: isDialogOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = useState(true);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = products.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(products.length / itemsPerPage);
   const [error, setError] = useState<string | null>(null);
   
+  // Estados para filtros
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>([]);
+
+  // Productos paginados (usando filteredProducts en lugar de products)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  // Crear colección para Select de categorías
+  const categoryCollection = createListCollection({
+    items: categories.map((cat) => ({
+      label: cat === "all" ? "Todas las categorías" : cat,
+      value: cat,
+    })),
+  });
+
   const loadProducts = async () => {
     setIsLoading(true);
     try{ 
       const data = await authCompanyAPI.getProducts();
       setProducts(data);
+      setFilteredProducts(data);
+      
+      // Extraer categorías únicas
+      const uniqueCategories = Array.from(
+        new Set(data.map((p) => p.category).filter(Boolean))
+      ).sort();
+      setCategories(["all", ...uniqueCategories]);
+      
       setSelectedProducts([]);
 
       if (currentPage > Math.ceil(data.length / itemsPerPage)) {
@@ -62,14 +90,51 @@ export const ProductList: React.FC = () => {
    }   
   };
 
-  const handleSave = async (product: Product) => {
-    if (product.id) {
-      await authCompanyAPI.updateProduct(product.id, product);
-    } else {
-      await authCompanyAPI.createProduct(product);
+  // Aplicar filtros
+  useEffect(() => {
+    let filtered = [...products];
+
+    // Filtrar por categoría
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(
+        (product) => product.category === selectedCategory
+      );
     }
-    onClose();
-    loadProducts();
+
+    // Filtrar por término de búsqueda
+    if (searchTerm.trim() !== "") {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (product) =>
+          product.name.toLowerCase().includes(term) ||
+          product.description?.toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredProducts(filtered);
+    setCurrentPage(1); // Resetear a primera página cuando cambian los filtros
+    setSelectedProducts([]); // Limpiar selección al filtrar
+  }, [searchTerm, selectedCategory, products]);
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+  };
+
+  const handleSave = async (formData: FormData) => {
+    try {
+      if (editingProduct) {
+        await authCompanyAPI.updateProduct(editingProduct.id, formData);
+      } else {
+        await authCompanyAPI.createProduct(formData);
+      }
+      onClose();
+      setEditingProduct(undefined);
+      await loadProducts();
+    } catch (error) {
+      console.error("Error saving product:", error);
+      setError(error instanceof Error ? error.message : "Error al guardar el producto");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -83,7 +148,7 @@ export const ProductList: React.FC = () => {
   };
 
   const hasSelection = selectedProducts.length > 0;
-  const isIndeterminate = hasSelection && selectedProducts.length < products.length;
+  const isIndeterminate = hasSelection && selectedProducts.length < filteredProducts.length;
 
   useEffect(() => { 
     loadProducts(); 
@@ -125,11 +190,11 @@ export const ProductList: React.FC = () => {
       </Dialog.Root>
 
       <Flex 
-        direction="row" 
+        direction={{ base: "column", md: "row" }} 
         justify="space-between" 
-        align="center" 
+        align={{ base: "stretch", md: "center" }} 
         mb={4}
-        gap={2}
+        gap={3}
       >
         <Heading size="xl" fontSize={{ base: "lg", md: "xl" }}>
           Lista de Productos
@@ -143,10 +208,65 @@ export const ProductList: React.FC = () => {
             setEditingProduct(undefined);
             onOpen();
           }}
-          >
+        >
           <FaPlus />
-          </IconButton>
+        </IconButton>
       </Flex>
+
+      {/* Barra de filtros */}
+      <VStack align="stretch" mb={6} gap={4}>
+        <HStack gap={4} flexWrap="wrap">
+          <Box flex="2" minW="200px">
+            <Input
+              placeholder="Buscar por nombre o descripción..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Box>
+
+          <Box flex="1" minW="200px">
+            <Select.Root
+              collection={categoryCollection}
+              value={[selectedCategory]}
+              onValueChange={(e) => setSelectedCategory(e.value[0])}
+              size="md"
+            >
+              <Select.HiddenSelect />
+              <Select.Control>
+                <Select.Trigger>
+                  <Select.ValueText placeholder="Filtrar por categoría" />
+                </Select.Trigger>
+                <Select.IndicatorGroup>
+                  <Select.Indicator />
+                </Select.IndicatorGroup>
+              </Select.Control>
+              <Portal>
+                <Select.Positioner>
+                  <Select.Content>
+                    {categoryCollection.items.map((item) => (
+                      <Select.Item key={item.value} item={item}>
+                        {item.label}
+                        <Select.ItemIndicator />
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Portal>
+            </Select.Root>
+          </Box>
+
+          {(searchTerm || selectedCategory !== "all") && (
+            <Button onClick={handleResetFilters} variant="ghost" size="sm">
+              Limpiar filtros
+            </Button>
+          )}
+        </HStack>
+
+        {/* Resultados encontrados */}
+        <Text fontSize="sm" color="gray.500">
+          {filteredProducts.length} producto(s) encontrado(s)
+        </Text>
+      </VStack>
       
       {isLoading ? (
         <Center py={10}>
@@ -157,10 +277,15 @@ export const ProductList: React.FC = () => {
           <Alert.Indicator />
           <Alert.Title>{error}</Alert.Title>
         </Alert.Root>
-      ) : products.length === 0 ? (
-        <Text fontSize="md" color="gray.500" textAlign="center" py={6}>
-          No se han encontrado productos.
-        </Text>
+      ) : filteredProducts.length === 0 ? (
+        <Box textAlign="center" py={10}>
+          <Text fontSize="lg" color="gray.500" mb={4}>
+            No se encontraron productos con los filtros seleccionados.
+          </Text>
+          <Button onClick={handleResetFilters} variant="outline">
+            Ver todos los productos
+          </Button>
+        </Box>
       ) : (
         <>
           <Box overflowX="auto">
@@ -236,7 +361,7 @@ export const ProductList: React.FC = () => {
                             setEditingProduct(product);
                             onOpen();
                           }}
-                          >
+                        >
                           <FaEdit />
                         </IconButton>
                         <IconButton
@@ -256,7 +381,7 @@ export const ProductList: React.FC = () => {
             </Table.Root>
           </Box>
 
-          <Flex justify="space-between" align="center" mt={4}>
+          <Flex justify="space-between" align="center" mt={4} flexWrap="wrap" gap={2}>
             <Flex gap={2} align="center">
               <IconButton
                 aria-label="Página anterior"
@@ -268,12 +393,12 @@ export const ProductList: React.FC = () => {
                 ←
               </IconButton>
               <Text fontSize="sm">
-                Página {currentPage} de {totalPages}
+                Página {currentPage} de {totalPages || 1}
               </Text>
               <IconButton
                 aria-label="Página siguiente"
                 onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
                 size="sm"
                 variant="ghost"
               >
