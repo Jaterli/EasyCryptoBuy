@@ -1,8 +1,8 @@
+// ProductCatalogPage.tsx (actualizado)
 import { useEffect, useState } from "react";
 import {
   Box,
   Heading,
-  Grid,
   Button,
   Alert,
   Input,
@@ -12,6 +12,7 @@ import {
   Select,
   Portal,
   createListCollection,
+  SimpleGrid,
 } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +33,6 @@ export const ProductCatalogPage = () => {
   const { cart } = useCart();
   const navigate = useNavigate();
 
-  // Crear colección para Select de Chakra UI v3
   const categoryCollection = createListCollection({
     items: categories.map((cat) => ({
       label: cat === "all" ? "Todas las categorías" : cat,
@@ -40,7 +40,6 @@ export const ProductCatalogPage = () => {
     })),
   });
 
-  // Cargar productos
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -49,8 +48,6 @@ export const ProductCatalogPage = () => {
           `${API_PATHS.company}/products/`
         );
         setProducts(response.data);
-
-        // Extraer categorías únicas
         const uniqueCategories = Array.from(
           new Set(response.data.map((p) => p.category).filter(Boolean))
         ).sort();
@@ -59,7 +56,6 @@ export const ProductCatalogPage = () => {
         setError(
           err instanceof Error ? err.message : "Error al cargar los productos"
         );
-        console.error("Error fetching products:", err);
       } finally {
         setIsLoading(false);
       }
@@ -68,18 +64,13 @@ export const ProductCatalogPage = () => {
     fetchProducts();
   }, []);
 
-  // Filtrar productos cuando cambian búsqueda, categoría o lista de productos
   useEffect(() => {
     let filtered = [...products];
-
-    // Filtrar por categoría
     if (selectedCategory !== "all") {
       filtered = filtered.filter(
         (product) => product.category === selectedCategory
       );
     }
-
-    // Filtrar por término de búsqueda (nombre o descripción)
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -88,23 +79,21 @@ export const ProductCatalogPage = () => {
           product.description?.toLowerCase().includes(term)
       );
     }
-
     setFilteredProducts(filtered);
   }, [searchTerm, selectedCategory, products]);
 
-  // Resetear filtros
   const handleResetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("all");
   };
 
   if (isLoading) {
-    return <Box padding="6">Cargando productos...</Box>;
+    return <Box p={6}>Cargando productos...</Box>;
   }
 
   if (error) {
     return (
-      <Alert.Root status="error" mb={4}>
+      <Alert.Root status="error" m={4}>
         <Alert.Indicator />
         <Alert.Title>{error}</Alert.Title>
       </Alert.Root>
@@ -112,10 +101,9 @@ export const ProductCatalogPage = () => {
   }
 
   return (
-    <Box padding="6">
-      <Heading marginBottom="4">Catálogo de Productos</Heading>
+    <Box p={{ base: 4, md: 6 }} maxW="1400px" mx="auto">
+      <Heading size="xl" mb={6}>Catálogo de Productos</Heading>
 
-      {/* Barra de búsqueda y filtros */}
       <VStack align="stretch" mb={6} gap={4}>
         <HStack gap={4} flexWrap="wrap">
           <Box flex="2" minW="200px">
@@ -131,7 +119,6 @@ export const ProductCatalogPage = () => {
               collection={categoryCollection}
               value={[selectedCategory]}
               onValueChange={(e) => setSelectedCategory(e.value[0])}
-              size="md"
             >
               <Select.HiddenSelect />
               <Select.Control>
@@ -158,19 +145,17 @@ export const ProductCatalogPage = () => {
           </Box>
 
           {(searchTerm || selectedCategory !== "all") && (
-            <Button onClick={handleResetFilters} variant="ghost" size="sm">
+            <Button onClick={handleResetFilters} variant="ghost">
               Limpiar filtros
             </Button>
           )}
         </HStack>
 
-        {/* Resultados encontrados */}
         <Text fontSize="sm" color="gray.500">
           {filteredProducts.length} producto(s) encontrado(s)
         </Text>
       </VStack>
 
-      {/* Grid de productos */}
       {filteredProducts.length === 0 ? (
         <Box textAlign="center" py={10}>
           <Text fontSize="lg" color="gray.500">
@@ -181,19 +166,26 @@ export const ProductCatalogPage = () => {
           </Button>
         </Box>
       ) : (
-        <Grid templateColumns="repeat(auto-fill, minmax(250px, 1fr))" gap="6">
+        <SimpleGrid 
+          columns={{ base: 1, sm: 2, md: 3, lg: 4 }} 
+          gap={6}
+        >
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} variant="catalog" />
           ))}
-        </Grid>
+        </SimpleGrid>
       )}
 
-      {/* Botón del carrito */}
       {cart.length > 0 && (
         <Button
-          colorPalette="blue"
-          marginTop="8"
+          colorScheme="blue"
+          mt={8}
           onClick={() => navigate("/cart-sumary")}
+          position="fixed"
+          bottom={4}
+          right={4}
+          boxShadow="lg"
+          zIndex={100}
         >
           Carrito ({cart.length})
         </Button>

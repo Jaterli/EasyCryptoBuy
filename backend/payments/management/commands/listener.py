@@ -67,7 +67,7 @@ class Command(BaseCommand):
             logger.info(f"Evento recibido: TX Hash {tx_hash}, Transaction ID {id}, Sender {sender_address}")
 
             max_retries = 5
-            base_delay = 5  # segundos
+            base_delay = 5
 
             tx = None
             await asyncio.sleep(base_delay)
@@ -105,44 +105,38 @@ class Command(BaseCommand):
                 logger.info(f"Transacción {tx.id} ya confirmada.")
                 return
 
-            # Marcar como confirmada
+            # Actualizar el hash si es necesario
+            if tx.transaction_hash != tx_hash:
+                tx.transaction_hash = tx_hash
+            
+            # Marcar como confirmada solo la transacción
             tx.status = 'confirmed'
-            # tx.transaction_hash = '0x'+tx_hash # Ya se está guardando en la vista
             await sync_to_async(tx.save)()
-            logger.info(f"Transacción {tx.id} confirmada y procesada.")
+            logger.info(f"Transacción {tx.id} confirmada.")
 
+            # Actualizar el estado de los OrderItems
+            order_items = await sync_to_async(
+                lambda: list(OrderItem.objects.filter(transaction=tx))
+            )()
+            
+            for order_item in order_items:
+                order_item.status = 'confirmed'
+                await sync_to_async(order_item.save)()
+            
+            logger.info(f"{len(order_items)} OrderItems actualizados a 'confirmed'")
+
+            # Procesar el carrito si todavía está activo
             cart = await sync_to_async(
-                lambda: Cart.objects.filter(transaction=tx.id, is_active=True).first()
+                lambda: Cart.objects.filter(transaction=tx, is_active=True).first()
             )()
 
-            # Procesar carrito si existe
             if cart:
-                logger.info(f"Carrito encontrado.")
-                # 1. Crear OrderItems para historial
-                cart_items = await sync_to_async(
-                    lambda: list(cart.cart_items.all().select_related('product'))
-                )()
-
-                for item in cart_items:
-                    await sync_to_async(OrderItem.objects.create)(
-                        transaction=tx,
-                        product=item.product,
-                        quantity=item.quantity,
-                        price_at_sale=item.product.amount_usd
-                    )
-
-                    # 2. Actualizar stock
-                    item.product.quantity = max(item.product.quantity - item.quantity, 0)
-                    await sync_to_async(item.product.save)()
-
-                # 3. Marcar carrito como inactivo y limpiar items
+                logger.info(f"Carrito activo encontrado, desactivando...")
                 cart.is_active = False
-                logger.info(f"Carrito desactivado.")
-
                 await sync_to_async(cart.clear_items)()
                 await sync_to_async(cart.save)()
             else:
-                logger.info(f"Carrito NO encontrado.")
+                logger.info(f"No se encontró carrito activo para la transacción {tx.id}")
 
         except Exception as e:
             logger.error(f"Error procesando evento: {e}", exc_info=True)

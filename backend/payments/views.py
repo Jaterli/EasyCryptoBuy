@@ -53,26 +53,56 @@ def register_transaction(request):
     except UserProfile.DoesNotExist:
         return Response({"success": False, "message": "Usuario no encontrado"}, status=404)
 
+    # Obtener el carrito activo
     cart = Cart.objects.filter(user=profile, is_active=True).first()
+    
+    if not cart:
+        return Response({"success": False, "message": "No hay carrito activo para este usuario"}, status=400)
+    
+    # Verificar que el carrito tenga items
+    cart_items = cart.cart_items.all().select_related('product')
+    if not cart_items.exists():
+        return Response({"success": False, "message": "El carrito está vacío"}, status=400)
+    
+    # Calcular el total en USD
+    total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)  
 
-    tx = Transaction.objects.create(
-        wallet_address=wallet_address,
-        amount=amount,
-        transaction_hash=transaction_hash,
-        token=token,
-        status='pending',
-    )
-
-    if cart:
-        # Relacionamos el carrito pero no lo marcamos como inactivo todavía
+    # Crear la transacción usando atomic para asegurar consistencia
+    with transaction.atomic():
+        tx = Transaction.objects.create(
+            wallet_address=wallet_address,
+            amount=amount,
+            amount_usd=total_usd,
+            transaction_hash=transaction_hash,
+            token=token,
+            status='pending',
+        )
+        
+        # Crear los OrderItems inmediatamente
+        for item in cart_items:
+            OrderItem.objects.create(
+                transaction=tx,
+                product=item.product,
+                quantity=item.quantity,
+                price_at_sale=item.product.amount_usd,
+                status='pending'  # Estado inicial pendiente
+            )
+            
+            # Actualizar stock del producto (reducir del inventario)
+            product = item.product
+            product.quantity = max(product.quantity - item.quantity, 0)
+            product.save()
+        
+        # Relacionar el carrito pero no lo marcamos como inactivo todavía
         cart.transaction = tx
         cart.save()
 
     return Response({
         "success": True,
-        "message": "Transacción provisional registrada",
+        "message": "Transacción provisional registrada con items del carrito",
         "transaction_id": tx.id,
-        "hash_placeholder": transaction_hash
+        "hash_placeholder": transaction_hash,
+        "items_count": cart_items.count()
     })
 
 
@@ -131,45 +161,46 @@ def update_transaction(request, transaction_id):
     tx.transaction_hash = transaction_hash
     tx.token = token
     
-    # Buscar el carrito asociado (usando first() para obtener una instancia)
+    # Buscar el carrito asociado
     cart = Cart.objects.filter(transaction=tx).first()
 
     if cart:
         print(f"Carrito encontrado: {cart.id}")
         
-        # Obtener items del carrito (ahora correcto al tener una instancia)
-        cart_items = cart.cart_items.all().select_related('product')
+        # Verificar si ya se crearon los OrderItems
+        order_items_exist = OrderItem.objects.filter(transaction=tx).exists()
         
-        # 1. Crear OrderItems para el historial
-        for item in cart_items:
-            OrderItem.objects.create(
-                transaction=tx,
-                product=item.product,
-                quantity=item.quantity,
-                price_at_sale=item.product.amount_usd,
-                status='pending'  # Estado inicial
-            )
-
-            # 2. Actualizar stock del producto
-            product = item.product
-            product.quantity = max(product.quantity - item.quantity, 0)
-            product.save()
-
-        # 3. Marcar carrito como inactivo y limpiar items
+        if not order_items_exist:
+            # Si no existen, crearlos (por si acaso)
+            cart_items = cart.cart_items.all().select_related('product')
+            
+            for item in cart_items:
+                OrderItem.objects.create(
+                    transaction=tx,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price_at_sale=item.product.amount_usd,
+                    status='pending'
+                )
+                
+                # Actualizar stock solo si no se había hecho antes
+                product = item.product
+                if product.quantity >= item.quantity:
+                    product.quantity = max(product.quantity - item.quantity, 0)
+                    product.save()
+            
+            # Calcular amount_usd
+            total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)
+            tx.amount_usd = total_usd
+        else:
+            print(f"OrderItems ya existen para la transacción {tx.id}")
+        
+        # Marcar carrito como inactivo y limpiar items
         cart.is_active = False
         cart.clear_items()
         cart.save()
         print(f"Carrito {cart.id} procesado y desactivado")
-        
-        # Calcular amount_usd basado en los productos del carrito
-        total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)
-        tx.amount_usd = total_usd
-        
-        # Marcar la transacción como pendiente porque aún no se ha confirmado en la blockchain
-        # tx.status = 'pending'
-    else:
-        print("No se encontró carrito asociado a esta transacción")
-
+    
     tx.save()
 
     return Response({

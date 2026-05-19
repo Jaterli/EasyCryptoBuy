@@ -1,6 +1,6 @@
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useState, useEffect, useCallback } from "react";
-import { Box, VStack, Text, Spinner, Heading, HStack, Button, Grid, GridItem, Image, Badge, Spacer, Stack } from "@chakra-ui/react";
+import { Box, VStack, Text, Spinner, Heading, HStack, Button, Grid, GridItem, Image, Badge, Flex } from "@chakra-ui/react";
 import { toaster } from "@/shared/components/ui/toaster";
 import ContractABI from "@/abis/PAYMENT_CONTRACT_ABI.json";
 import StandardERC20ABI from "@/abis/ERC20.json";
@@ -448,76 +448,82 @@ export function Payment() {
   // }
 
   return (
-    <Box p={5} mt={5} mb={5}>
-      <Grid templateColumns={{ base: "1fr", lg: cart.length > 0 ? "1fr 1fr" : "1fr" }} gap={{ base: "0", lg: "8" }}>
+    <Box p={{ base: 4, md: 5 }} maxW="1400px" mx="auto">
+
+      <Heading size="xl" mb={6}>
+        Resumen de tu compra
+      </Heading>
+
+      <Grid 
+        templateColumns={{ base: "1fr", lg: "1fr 1fr" }} 
+        gap={{ base: 6, lg: 8 }}
+      >
         {/* Columna izquierda - Resumen del carrito */}
         <GridItem>
-          <Box>
-            <Heading size="lg" mb={6} textAlign="left">Resumen de tu compra</Heading>
-            
-            {cartLoading ? (
-              <VStack>
-                <Spinner size="md" />
-                <Text>Cargando carrito...</Text>
-              </VStack>
-            ) : cart.length === 0 ? (
-              <VStack gap={4} textAlign="center" py={8}>
-                <Text fontSize="xl" fontWeight="medium">Tu carrito está vacío</Text>
-                <Text color="gray.500">No hay productos para mostrar</Text>
-                <Button asChild colorPalette="blue" mt={4}>
-                  <a href="/products-catalog">
-                    Explorar productos
-                  </a>
-                </Button>
-              </VStack>
-            ) : (
-              <Stack align="stretch">
-                {cart.map((item) => (
-                  <Box key={item.product.id}>
-                    <HStack align="flex-start" gap={4}>
-                      <Box flexShrink={0}>
-                        <Image 
-                          src={`https://picsum.photos/seed/${item.product.id}/80`}
-                          boxSize="80px"
-                          objectFit="cover"
-                          borderRadius="md"
-                          alt={item.product.name}
-                        />
-                      </Box>
-                      <Box flex={1}>
-                        <HStack justify="space-between">
-                          <Text fontWeight="bold" fontSize="lg">{item.product.name}</Text>
-                          <Text fontWeight="bold" color="blue.500">
-                            ${(item.product.amount_usd * item.quantity).toFixed(2)}
-                          </Text>
-                        </HStack>
-                        <Text fontSize="sm" opacity="0.7" mb={1}>
-                          {item.product.description || "Sin descripción disponible"}
+          {cartLoading ? (
+            <VStack>
+              <Spinner size="md" />
+              <Text>Cargando carrito...</Text>
+            </VStack>
+          ) : cart.length === 0 ? (
+            <VStack gap={4} textAlign="center" py={8}>
+              <Text fontSize="xl" fontWeight="medium">Tu carrito está vacío</Text>
+              <Text color="gray.500">No hay productos para mostrar</Text>
+              <Button colorScheme="blue" mt={4} as="a" onClick={() => navigate("/products-catalog")}>
+                Explorar productos
+              </Button>
+            </VStack>
+          ) : (
+            <VStack align="stretch" gap={4}>
+              {cart.map((item) => (
+                <Box 
+                  key={item.product.id} 
+                  p={4} 
+                  borderWidth="1px" 
+                  borderRadius="lg"
+                  _hover={{ boxShadow: "md" }}
+                >
+                  <Flex gap={4} direction={{ base: "column", sm: "row" }}>
+                    <Image 
+                      src={item.product.image || "https://placehold.co/300x200?text=Sin+Imagen"}
+                      boxSize={{ base: "100%", sm: "80px" }}
+                      objectFit="cover"
+                      borderRadius="md"
+                      alt={item.product.name}
+                    />
+                    <Box flex={1}>
+                      <Flex justify="space-between" wrap="wrap" gap={2}>
+                        <Text fontWeight="bold" fontSize="lg">{item.product.name}</Text>
+                        <Text fontWeight="bold" color="blue.500">
+                          ${(item.product.amount_usd * item.quantity).toFixed(2)}
                         </Text>
-                        <HStack justify="space-between">
-                          <Badge colorPalette="blue" variant="outline">
-                            x {item.quantity} unidad{item.quantity > 1 ? "es" : ""}
-                          </Badge>
-                          <Text fontSize="sm" opacity="0.5" >
-                            ${item.product.amount_usd} c/u
-                          </Text>
-                        </HStack>
-                      </Box>
-                    </HStack>
-                  </Box>
-                ))}
-                
-                <Spacer my={4} />
-                
-                <HStack justify="space-between" mt={2}>
+                      </Flex>
+                      <Text fontSize="sm" opacity="0.7" mb={1}>
+                        {item.product.description || "Sin descripción disponible"}
+                      </Text>
+                      <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+                        <Badge colorScheme="blue" variant="outline">
+                          x {item.quantity} unidad{item.quantity > 1 ? "es" : ""}
+                        </Badge>
+                        <Text fontSize="sm" opacity="0.5">
+                          ${item.product.amount_usd} c/u
+                        </Text>
+                      </Flex>
+                    </Box>
+                  </Flex>
+                </Box>
+              ))}
+              
+              <Box pt={4} borderTopWidth="1px">
+                <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
                   <Text fontSize="lg" fontWeight="bold">Total:</Text>
                   <Text fontSize="xl" fontWeight="bold" color="green.600">
                     ${totalUSD.toFixed(2)} USD
                   </Text>
-                </HStack>
-              </Stack>
-            )}
-          </Box>
+                </Flex>
+              </Box>
+            </VStack>
+          )}
 
           {/* Mensajes de stock */}
           {cart.length > 0 && checkingStock && (
@@ -526,6 +532,7 @@ export function Payment() {
               <Text mt={2}>Verificando disponibilidad...</Text>
             </Box>
           )}
+          
           {cart.length > 0 && stockIssues.length > 0 && (
             <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200">
               <Text color="red.600" fontWeight="bold" mb={2}>
@@ -541,9 +548,8 @@ export function Payment() {
               <Button 
                 onClick={() => navigate("/cart-summary")} 
                 variant="outline" 
-                colorPalette="red" 
+                colorScheme="red" 
                 mt={4}
-                size="sm"
               >
                 Editar carrito
               </Button>
@@ -554,7 +560,7 @@ export function Payment() {
         {/* Columna derecha - Formulario de pago */}
         {cart.length > 0 && (
           <GridItem>
-            <Box maxW="500px">
+            <Box w="100%">
               {writeError || writeApproveError ? (
                 <Box p={6} overflowX="auto">
                   <Text overflowX="auto" fontSize="sm" color="red.500" textAlign="center">

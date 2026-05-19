@@ -95,7 +95,7 @@ export function PaymentForm({
         console.warn("Autenticación fallida (authSuccess false)");        
       }
     } catch (error) {
-      console.error("Error en autenticación:", error); // Debug 6
+      console.error("Error en autenticación:", error);
       toaster.create({
         title: "Error de autenticación",
         description: error instanceof Error ? error.message : "No se pudo autenticar",

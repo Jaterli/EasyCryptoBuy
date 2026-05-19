@@ -23,7 +23,7 @@ import {
   Button,
 } from "@chakra-ui/react";
 import { ProductForm } from "./ProductForm";
-import { FaEdit, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaPlus, FaTrash, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { Product } from "@/shared/types/types";
 import { authCompanyAPI } from "../services/companyApi";
 
@@ -310,6 +310,7 @@ export const ProductList: React.FC = () => {
                   <Table.ColumnHeader display={{ base: "none", md: "table-cell" }}>DESCRIPCIÓN</Table.ColumnHeader>
                   <Table.ColumnHeader textAlign="end">MONTO</Table.ColumnHeader>
                   <Table.ColumnHeader textAlign="end">CANTIDAD</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="center">IMG</Table.ColumnHeader>
                   <Table.ColumnHeader textAlign="center">ACCIONES</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
@@ -350,6 +351,15 @@ export const ProductList: React.FC = () => {
                       </Text>
                     </Table.Cell>
                     <Table.Cell textAlign="end">{product.quantity}</Table.Cell>
+                    <Table.Cell textAlign="center">
+                      <Box as="span" display="inline-block">
+                        {product.image ? (
+                          <FaCheckCircle color="green" size="16px" />
+                        ) : (
+                          <FaTimesCircle color="gray" size="16px" />
+                        )}
+                      </Box>
+                    </Table.Cell>
                     <Table.Cell>
                       <Flex justify="center" gap={2}>
                         <IconButton

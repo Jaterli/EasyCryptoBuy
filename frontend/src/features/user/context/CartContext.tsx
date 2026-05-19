@@ -142,7 +142,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearCart = async () => {
-    if (!address || cartError) return;
+    if (!address) {
+      setCart([]);      
+      localStorage.removeItem("guest_cart");
+      return;
+    }
+    if (cartError) return;
     if (!await verifyBeforeCartOperation()) return;
 
     try {

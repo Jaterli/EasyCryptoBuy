@@ -135,9 +135,6 @@ export const axiosUserAPI = {
   updateTransaction: (id: number, payload: unknown) => 
     authUserAxios.put(`${API_PATHS.payments}/update-transaction/${id}`, payload),
   
-  // getTransactionDetail: (hash: `0x${string}` | undefined) => 
-  //   authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`),
-  
   getTransactionDetail: async (hash: string | undefined): Promise<ApiResponse<Transaction>> => {
     try {
       const { data } = await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`);
@@ -147,14 +144,6 @@ export const axiosUserAPI = {
     }
   },
   
-  // getTransactionDetail: async (hash: string) => {
-  //   return await authUserAxios.get(`${API_PATHS.payments}/get-transaction-detail/${hash}`)
-  //   .then(response => response.data)
-  //   .catch(err => {
-  //     throw new Error (err.response.data.error);
-  //   })
-  // },
-
   deleteTransaction: (id: number) => 
     authUserAxios.delete(`${API_PATHS.payments}/delete-transaction/${id}`),
 

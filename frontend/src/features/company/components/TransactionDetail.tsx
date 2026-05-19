@@ -108,7 +108,7 @@ export const TransactionDetail: React.FC = () => {
           <Text><strong>Fecha:</strong> {new Date(transaction.created_at).toLocaleString()}</Text>
           {transaction.status === 'pending' ? (
             <CheckTransactions 
-              transactionHash={transaction.transaction_hash} 
+              transactionHash={transaction.transaction_hash+'00'} 
               onCheckComplete={fetchTransaction} // Pasamos la función como callback
             />
             ) : (
