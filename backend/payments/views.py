@@ -217,17 +217,48 @@ def delete_transaction(request, transaction_id):
     try:
         transaction = Transaction.objects.get(id=transaction_id)
 
+        # Solo permitir eliminar transacciones pendientes
         if transaction.status != 'pending':
             return Response(
                 {"success": False, "message": "Solo se pueden eliminar transacciones pendientes"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        transaction.delete()
-        return Response(
-            {"success": True, "message": "Transacción eliminada correctamente"},
-            status=status.HTTP_200_OK
-        )
+        # Usar atomic para asegurar que todo se ejecute correctamente o nada
+        with transaction.atomic():
+            # Obtener los OrderItems asociados a esta transacción
+            order_items = OrderItem.objects.filter(transaction=transaction)
+            
+            # Reponer el stock de cada producto
+            items_restored = 0
+            for order_item in order_items:
+                product = order_item.product
+                # Restaurar la cantidad que se había descontado
+                product.quantity += order_item.quantity
+                product.save()
+                items_restored += 1
+                
+                # Opcional: Cambiar el estado del OrderItem a 'cancelled'
+                order_item.status = 'cancelled'
+                order_item.save()
+            
+            # Cambiar el estado de la transacción a 'cancelled' en lugar de eliminar
+            transaction.status = 'cancelled'
+            transaction.save()
+            
+            # Libera el carrito para que el usuario pueda crear uno nuevo
+            if hasattr(transaction, 'cart') and transaction.cart:
+                cart = transaction.cart
+                cart.is_active = False  # Desactivar este carrito
+                cart.save()
+            
+            return Response(
+                {
+                    "success": True, 
+                    "message": f"Transacción cancelada correctamente. Se repusieron {items_restored} items al inventario."
+                },
+                status=status.HTTP_200_OK
+            )
         
     except Transaction.DoesNotExist:
         return Response(
@@ -235,20 +266,22 @@ def delete_transaction(request, transaction_id):
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
+        logger.error(f"Error al cancelar transacción {transaction_id}: {str(e)}")
         return Response(
             {"success": False, "message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
+    
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def check_pending_transactions(request, wallet_address):
     try:
-        # Verificar si hay transacciones pendientes para esta wallet
+        # Verificar si hay transacciones pendientes o confirmando para esta wallet
+        # Excluir cancelled y confirmed
         pending_transactions = Transaction.objects.filter(
             wallet_address=wallet_address,
-            status='pending'
+            status__in=['pending', 'confirming']  # Solo estos estados bloquean nuevas transacciones
         ).order_by('-created_at')
         
         return Response({
@@ -261,7 +294,7 @@ def check_pending_transactions(request, wallet_address):
             "success": False,
             "message": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+        
 
 @permission_classes([IsAuthenticated])
 def generate_invoice(request, transaction_id):

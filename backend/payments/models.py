@@ -9,9 +9,11 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=36, decimal_places=18)
     amount_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=[
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('failed', 'Failed')
+        ('pending', 'Pendiente'),      # Registrada, no enviada a blockchain
+        ('confirming', 'Confirmando'), # Enviada a blockchain, esperando confirmación
+        ('confirmed', 'Confirmada'),   # Confirmada en blockchain
+        ('failed', 'Fallida'),         # Falló o expiró
+        ('cancelled', 'Cancelada'),    # Cancelada por el usuario o sistema        
     ], default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
