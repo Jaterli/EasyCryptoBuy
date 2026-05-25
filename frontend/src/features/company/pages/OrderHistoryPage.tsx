@@ -21,6 +21,7 @@ const statusOptions = createListCollection({
     { label: "Pendiente", value: "pending" },
     { label: "Procesado", value: "processed" },
     { label: "Enviado", value: "shipped" },
+    { label: "Cancelado", value: "cancelled" },
   ],
 });
 
@@ -35,7 +36,8 @@ const itemsPerPageOptions = createListCollection({
 const statusColors = {
   pending: 'yellow.600',
   processed: 'blue.400',
-  shipped: 'green'
+  shipped: 'green',
+  cancelled: 'red.500'
 };
 
 export function OrderHistoryPage() {

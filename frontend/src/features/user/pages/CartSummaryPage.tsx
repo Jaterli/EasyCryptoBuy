@@ -1,4 +1,4 @@
-// CartSummaryPage.tsx (simplificado)
+// CartSummaryPage.tsx
 import { Box, Heading, Text, Button, SimpleGrid, Flex, Stack } from "@chakra-ui/react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -39,8 +39,12 @@ export const CartSummaryPage = () => {
         gap={6}
         mb={6}
       >
-        {cart.map(({ product }) => (
-          <ProductCard key={product.id} product={product} variant="summary" />
+        {cart.map((item) => (
+          <ProductCard 
+            key={item.product.id} 
+            product={item.product} 
+            variant="summary"
+          />
         ))}
       </SimpleGrid>
 

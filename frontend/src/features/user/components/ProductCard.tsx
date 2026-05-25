@@ -12,7 +12,7 @@ export const ProductCard = ({ product, variant = 'catalog' }: ProductCardProps) 
   const { cart, addToCart, removeFromCart, updateQuantity } = useCart();
   const cartItem = cart.find(item => item.product.id === product.id);
   const currentQty = cartItem?.quantity || 0;
-  const available = product.quantity - currentQty;
+  const available = product.stock_quantity - currentQty;
 
   const handleAddToCart = () => {
     addToCart(product);
@@ -21,7 +21,7 @@ export const ProductCard = ({ product, variant = 'catalog' }: ProductCardProps) 
   const handleUpdateQuantity = async (newQuantity: number) => {
     if (newQuantity < 1) {
       await removeFromCart(product.id);
-    } else if (newQuantity <= product.quantity) {
+    } else if (newQuantity <= product.stock_quantity) {
       await updateQuantity(product.id, newQuantity);
     }
   };
@@ -64,7 +64,7 @@ export const ProductCard = ({ product, variant = 'catalog' }: ProductCardProps) 
                 size="xs"
                 variant="outline"
                 onClick={() => handleUpdateQuantity(currentQty + 1)}
-                disabled={currentQty >= product.quantity}
+                disabled={currentQty >= product.stock_quantity}
               >
                 +
               </Button>

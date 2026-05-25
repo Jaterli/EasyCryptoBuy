@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
-import { ApiCartItem, CartContextType, CartItem, Product } from "@/shared/types/types";
+import { CartContextType, CartItem, Product } from "@/shared/types/types";
 import { useWallet } from "@/features/user/hooks/useWallet";
-import { axiosUserAPI } from "../services/userApi";
+
+const CART_STORAGE_KEY = "shopping_cart";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -12,223 +13,170 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cartLoading, setCartLoading] = useState<boolean>(true);
   const [cartError, setCartError] = useState<boolean>(false);
   const { address } = useAccount();
+  const isInitialLoadDone = useRef(false);
 
-  // Verificar transacciones pendientes
-  const checkPendingTransactions = async () => {
-    if (!address || !isWalletRegistered) {
-      return [];
-    }
-    
+  // Función para guardar en localStorage
+  const persistCart = useCallback((cartData: CartItem[]) => {
     try {
-      console.log("Comprobando si hay transacciones pendientes...");
-      const { data } = await axiosUserAPI.checkPendingTransactions(address);
-      
-      if (data.success) {
-        return data.transactions || [];
-      } else {
-        console.error("Error checking pending transactions:", data.message);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
+    } catch (error) {
+      console.error("Error guardando carrito en localStorage:", error);
+    }
+  }, []);
+
+  // Función para cargar desde localStorage
+  const loadFromLocalStorage = useCallback((): CartItem[] => {
+    try {
+      const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (storedCart) {
+        return JSON.parse(storedCart);
       }
-    } catch (err) {
-      console.error("Error verificando transacciones pendientes:", err);
+    } catch (error) {
+      console.error("Error cargando carrito desde localStorage:", error);
     }
     return [];
-  };
+  }, []);
 
-  // Verificar transacciones pendientes al cambiar de cuenta
-  useEffect(() => {
-    checkPendingTransactions();
-  }, [address]);
 
-  // Función genérica para verificar transacciones antes de operaciones
-  const verifyBeforeCartOperation = async (): Promise<boolean> => {
+  const verifyBeforeCartOperation = useCallback(async (): Promise<boolean> => {
     if (cartError) {
-      console.error("Cannot perform cart operations due to previous cart loading error");
+      console.error("No se puede modificar el carrito por error previo");
       return false;
     }
-    
-    const pending = await checkPendingTransactions();
-    
-    if (pending.length > 0) {
-      alert(`No puedes modificar el carrito mientras tengas transacciones pendientes. 
-             Por favor, completa o cancela las transacciones pendientes primero.`);
-      return false;
-    }
+    // Eliminamos la verificación de transacciones pendientes para el carrito local
     return true;
-  };
+  }, [cartError]);
 
-  // Guardar Carrito
-  useEffect(() => {
-    if (!address || !isWalletRegistered || cart.length === 0 || cartError) return;
-
-     (async function () {
-      const payload = {
-        wallet: address,
-        cart_items: cart.map((cart_item: CartItem) => ({
-          product_id: cart_item.product.id,
-          quantity: cart_item.quantity
-        }))
-      };
-
-      console.log("Procediendo al guardado del carrito...");
-      try {
-        await axiosUserAPI.saveCart(payload);
-      } catch (error) {
-        console.error("Error sincronizando carrito:", error);
-      }
-    })();
-
-  }, [cart, address]);
-
-
-  // Operaciones del carrito
-  const addToCart = async (product: Product) => {
-    if (cartError || !await verifyBeforeCartOperation()) return;
-
-    setCart(prev => {
-      const existing = prev.find(cart_item => cart_item.product.id === product.id);
-      if (existing) {
-        if (existing.quantity < product.quantity) {
-          return prev.map(cart_item =>
-            cart_item.product.id === product.id
-              ? { ...cart_item, quantity: cart_item.quantity + 1 }
-              : cart_item
-          );
-        } else {
-          alert("Has alcanzado el máximo disponible de este producto");
-          return prev;
-        }
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
-  };
-
-  const removeFromCart = async (id: string) => {
-    if (cartError || !await verifyBeforeCartOperation()) return;
-    const updatedCart = cart.filter(cart_item => cart_item.product.id !== id);
-    if (updatedCart.length > 0){
-      setCart(updatedCart);    
-    } else {
-      clearCart();
-    }
-  };
-
-
-  const updateQuantity = async (productId: string, newQuantity: number) => {
-    if (cartError || !await verifyBeforeCartOperation()) return;
+  const addToCart = useCallback(async (product: Product) => {
+    if (!await verifyBeforeCartOperation()) return;
     
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === productId);
-      if (!existing) return prev;
+      const existing = prev.find(item => item.product.id === product.id);
+      const currentQty = existing?.quantity || 0;
       
-      if (newQuantity <= 0) {
-        return prev.filter(item => item.product.id !== productId);
+      // Verificar stock disponible
+      if (currentQty >= product.stock_quantity) {
+        alert(`No hay suficiente stock. Máximo disponible: ${product.stock_quantity} unidades`);
+        return prev;
       }
       
-      if (newQuantity > existing.product.quantity) {
-        alert(`No puedes agregar más de ${existing.product.quantity} unidades`);
-        return prev.map(item =>
-          item.product.id === productId
-            ? { ...item, quantity: existing.product.quantity }
+      let newCart;
+      if (existing) {
+        newCart = prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+      } else {
+        newCart = [...prev, { product, quantity: 1 }];
       }
       
-      return prev.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      );
+      // Persistir en localStorage
+      persistCart(newCart);
+      return newCart;
     });
-  };
+  }, [verifyBeforeCartOperation, persistCart]);
 
-  const clearCart = async () => {
-    if (!address) {
-      setCart([]);      
-      localStorage.removeItem("guest_cart");
+  const removeFromCart = useCallback(async (productId: string) => {
+    if (!await verifyBeforeCartOperation()) return;
+    
+    setCart(prev => {
+      const newCart = prev.filter(item => item.product.id !== productId);
+      persistCart(newCart);
+      return newCart;
+    });
+  }, [verifyBeforeCartOperation, persistCart]);
+
+  const updateQuantity = useCallback(async (productId: string, newQuantity: number) => {
+    if (!await verifyBeforeCartOperation()) return;
+    
+    if (newQuantity <= 0) {
+      await removeFromCart(productId);
       return;
     }
-    if (cartError) return;
-    if (!await verifyBeforeCartOperation()) return;
+    
+    setCart(prev => {
+      const item = prev.find(i => i.product.id === productId);
+      if (!item) return prev;
+      
+      // Verificar que no exceda el stock disponible
+      if (newQuantity > item.product.stock_quantity) {
+        alert(`No puedes agregar más de ${item.product.stock_quantity} unidades de "${item.product.name}"`);
+        const updatedCart = prev.map(i =>
+          i.product.id === productId
+            ? { ...i, quantity: item.product.stock_quantity }
+            : i
+        );
+        persistCart(updatedCart);
+        return updatedCart;
+      }
+      
+      const updatedCart = prev.map(i =>
+        i.product.id === productId
+          ? { ...i, quantity: newQuantity }
+          : i
+      );
+      persistCart(updatedCart);
+      return updatedCart;
+    });
+  }, [verifyBeforeCartOperation, removeFromCart, persistCart]);
 
-    try {
-      await axiosUserAPI.clearCart(address);
-      setCart([]);
-      console.log("Carrito limpiado.");
-    } catch (err) {
-      console.error("Error limpiando carrito en backend:", err);
-    }
-  };
+  const clearCart = useCallback(async () => {
+    setCart([]);
+    persistCart([]);
+  }, [persistCart]);
 
-  useEffect(() => {
-    if (!isWalletRegistered || !address) {
-      localStorage.setItem("guest_cart", JSON.stringify(cart));
-    }
-  }, [cart, isWalletRegistered, address]);
-
-  // Función para cargar el carrito desde el backend
+  // Cargar carrito desde localStorage al iniciar
   useEffect(() => {
     const loadCart = async () => {
-      if (!address || !isWalletRegistered) return;
-      console.log("Cargando carrito...")
-      // Si existe carrito local y no hay carrito cargado aún desde backend
-      const guestCartString = localStorage.getItem("guest_cart");
-      if (guestCartString) {
-        try {
-          const guestCart: CartItem[] = JSON.parse(guestCartString);
-          if (guestCart.length > 0) {
-            setCart(guestCart); // actualizamos el estado local
-            // Luego sincronizamos con el backend
-            const payload = {
-              wallet: address,
-              cart_items: guestCart.map((cart_item: CartItem) => ({
-                product_id: cart_item.product.id,
-                quantity: cart_item.quantity
-              }))
-            };
-            await axiosUserAPI.saveCart(payload);
-            localStorage.removeItem("guest_cart");
-          }
-        } catch (e) {
-          console.error("Error sincronizando carrito de invitado:", e);
-        }
-      }
-
       setCartLoading(true);
       setCartError(false);
+      
       try {
-        const { data } = await axiosUserAPI.getCart(address);
-
-        if (Array.isArray(data?.cart_items)) {
-          const restored = data.cart_items.map((cart_item: ApiCartItem) => ({
-            product: {
-              id: cart_item.product.id,
-              name: cart_item.product.name,
-              description: cart_item.product.description,
-              amount_usd: cart_item.product.amount_usd
-            },
-            quantity: cart_item.quantity
-          }));
-          console.log("Carrito cargado.");
-          setCart(restored);
-        } else {
-          console.log("Carrito vacío.");
-          setCart([]);
-          if (data.error) {
-            console.error("Error al cargar el carrito: ", data.error);
-            setCartError(true);
+        const storedCart = loadFromLocalStorage();
+        
+        // Validar que los productos en el carrito aún tengan stock disponible
+        // Esto es importante para evitar que el usuario compre productos sin stock
+        const validatedCart = storedCart.filter(item => {
+          if (item.product.stock_quantity <= 0) {
+            console.warn(`Producto ${item.product.name} sin stock, eliminando del carrito`);
+            return false;
           }
+          if (item.quantity > item.product.stock_quantity) {
+            console.warn(`Ajustando cantidad de ${item.product.name} de ${item.quantity} a ${item.product.stock_quantity}`);
+            item.quantity = item.product.stock_quantity;
+          }
+          return true;
+        });
+        
+        if (validatedCart.length !== storedCart.length) {
+          persistCart(validatedCart);
         }
+        
+        setCart(validatedCart);
       } catch (err) {
-        console.error("Error al cargar el carrito: ", err);
+        console.error("Error cargando carrito:", err);
         setCartError(true);
         setCart([]);
       } finally {
         setCartLoading(false);
+        isInitialLoadDone.current = true;
       }
     };
 
     loadCart();
-  }, [address, setCart, setCartLoading, isWalletRegistered]);
+  }, [loadFromLocalStorage, persistCart]);
+
+  // Opcional: Sincronizar carrito cuando cambia la wallet
+  // Puedes decidir si quieres mantener el mismo carrito al cambiar de wallet
+  // o preguntar al usuario si quiere migrar
+  useEffect(() => {
+    if (address && isWalletRegistered && isInitialLoadDone.current) {
+      // Si quieres mantener el carrito al cambiar de wallet, no hagas nada
+      // Si quieres cargar un carrito específico por wallet, puedes implementarlo aquí
+      console.log(`Wallet conectada: ${address}, carrito actual:`, cart);
+    }
+  }, [address, isWalletRegistered, cart]);
 
   return (
     <CartContext.Provider

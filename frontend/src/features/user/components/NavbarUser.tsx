@@ -161,7 +161,7 @@ export function Navbar() {
                       <NavButton to="/profile">Perfil</NavButton>
                     </>
                   )}
-                  <NavButton to="/cart-sumary">
+                  <NavButton to="/cart-summary">
                     <CartIcon /> Carrito
                   </NavButton>
 
@@ -197,7 +197,7 @@ export function Navbar() {
           <NavButton to="/profile">Perfil</NavButton>
         </>
       )}
-      <NavLink to="/cart-sumary">
+      <NavLink to="/cart-summary">
         <Box px={2} py={1} _hover={{ bg: "transparent" }}>
           <CartIcon />
         </Box>

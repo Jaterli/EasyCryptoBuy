@@ -350,7 +350,7 @@ export const ProductList: React.FC = () => {
                         })}
                       </Text>
                     </Table.Cell>
-                    <Table.Cell textAlign="end">{product.quantity}</Table.Cell>
+                    <Table.Cell textAlign="end">{product.stock_quantity}</Table.Cell>
                     <Table.Cell textAlign="center">
                       <Box as="span" display="inline-block">
                         {product.image ? (

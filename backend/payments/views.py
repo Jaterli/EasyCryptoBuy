@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from django.http import Http404, JsonResponse, HttpResponse
 from .utils.formatters import format_scientific_to_decimal
-from .models import OrderItem, Transaction, Cart
+from .models import OrderItem, Transaction, Product
 from reportlab.lib.pagesizes import letter
 from django.shortcuts import get_object_or_404
 from reportlab.lib import colors
@@ -14,8 +14,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from users.models import UserProfile
-from .serializers import CartSerializer, OrderItemSerializer, TransactionSerializer
+from .serializers import OrderItemSerializer, TransactionSerializer
 from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
@@ -25,16 +28,20 @@ def register_transaction(request):
     wallet_address = data.get("wallet_address")
     amount = data.get("amount")
     token = data.get("token")
+    cart_items_data = data.get("cart_items", [])  # Recibir items del frontend
 
     if not all([wallet_address, amount, token]):
         return Response({"success": False, "message": "Faltan campos necesarios"}, status=400)
+
+    if not cart_items_data:
+        return Response({"success": False, "message": "El carrito está vacío"}, status=400)
 
     try:
         amount = Decimal(amount)
     except (TypeError, InvalidOperation):
         return Response({"success": False, "message": "El campo 'amount' es inválido"}, status=400)
 
-    # Verificación de si el servicio WEB3_PROVIDER está configurado y funcionando
+    # Verificación de WEB3_PROVIDER
     provider_url = getattr(settings, 'WEB3_PROVIDER', None)
     if not provider_url:
         return Response({"success": False, "message": "Servicio WEB3_PROVIDER sin servicio"}, status=500)
@@ -43,31 +50,48 @@ def register_transaction(request):
     if not web3.is_connected():
         return Response({"success": False, "message": "No se pudo conectar a la red Ethereum"}, status=500)
 
-    transaction_hash = wallet_address  # Primeramente toma la dirección de la wallet, se actualizará después con el hash real.
+    transaction_hash = wallet_address
 
-    if Transaction.objects.filter(transaction_hash=transaction_hash).exists():
-        return Response({"success": False, "message": "Hay una transacción pendiente para esta wallet. Si pasado unos minutos sigue pendiente, contacte con soporte."}, status=409)
+    if Transaction.objects.filter(transaction_hash=transaction_hash, status='pending').exists():
+        return Response({"success": False, "message": "Hay una transacción pendiente para esta wallet."}, status=409)
 
     try:
         profile = UserProfile.objects.get(wallet_address=wallet_address)
     except UserProfile.DoesNotExist:
         return Response({"success": False, "message": "Usuario no encontrado"}, status=404)
 
-    # Obtener el carrito activo
-    cart = Cart.objects.filter(user=profile, is_active=True).first()
+    # Validar stock y construir productos
+    products_to_buy = []
+    total_usd = Decimal('0')
     
-    if not cart:
-        return Response({"success": False, "message": "No hay carrito activo para este usuario"}, status=400)
-    
-    # Verificar que el carrito tenga items
-    cart_items = cart.cart_items.all().select_related('product')
-    if not cart_items.exists():
-        return Response({"success": False, "message": "El carrito está vacío"}, status=400)
-    
-    # Calcular el total en USD
-    total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)  
+    for item_data in cart_items_data:
+        product_id = item_data.get('product_id')
+        quantity = item_data.get('quantity')
+        
+        if not product_id or not quantity:
+            return Response({"success": False, "message": "Datos de producto inválidos"}, status=400)
+        
+        try:
+            product = Product.objects.get(id=product_id)
+            
+            # Verificar stock
+            if product.stock_quantity < quantity:
+                return Response({
+                    "success": False,
+                    "message": f"Stock insuficiente para {product.name}. Disponible: {product.stock_quantity}"
+                }, status=400)
+            
+            products_to_buy.append({
+                'product': product,
+                'quantity': quantity
+            })
+            
+            total_usd += product.amount_usd * quantity
+            
+        except Product.DoesNotExist:
+            return Response({"success": False, "message": f"Producto {product_id} no encontrado"}, status=404)
 
-    # Crear la transacción usando atomic para asegurar consistencia
+    # Crear transacción y OrderItems
     with transaction.atomic():
         tx = Transaction.objects.create(
             wallet_address=wallet_address,
@@ -78,31 +102,29 @@ def register_transaction(request):
             status='pending',
         )
         
-        # Crear los OrderItems inmediatamente
-        for item in cart_items:
+        # Crear OrderItems y actualizar stock
+        for item in products_to_buy:
+            product = item['product']
+            quantity = item['quantity']
+            
             OrderItem.objects.create(
                 transaction=tx,
-                product=item.product,
-                quantity=item.quantity,
-                price_at_sale=item.product.amount_usd,
-                status='pending'  # Estado inicial pendiente
+                product=product,
+                quantity=quantity,
+                price_at_sale=product.amount_usd,
+                status='pending'
             )
             
-            # Actualizar stock del producto (reducir del inventario)
-            product = item.product
-            product.quantity = max(product.quantity - item.quantity, 0)
+            # Actualizar stock
+            product.stock_quantity = max(product.stock_quantity - quantity, 0)
             product.save()
-        
-        # Relacionar el carrito pero no lo marcamos como inactivo todavía
-        cart.transaction = tx
-        cart.save()
 
     return Response({
         "success": True,
-        "message": "Transacción provisional registrada con items del carrito",
+        "message": "Transacción registrada exitosamente",
         "transaction_id": tx.id,
         "hash_placeholder": transaction_hash,
-        "items_count": cart_items.count()
+        "items_count": len(products_to_buy)
     })
 
 
@@ -160,47 +182,6 @@ def update_transaction(request, transaction_id):
     tx.amount = amount
     tx.transaction_hash = transaction_hash
     tx.token = token
-    
-    # Buscar el carrito asociado
-    cart = Cart.objects.filter(transaction=tx).first()
-
-    if cart:
-        print(f"Carrito encontrado: {cart.id}")
-        
-        # Verificar si ya se crearon los OrderItems
-        order_items_exist = OrderItem.objects.filter(transaction=tx).exists()
-        
-        if not order_items_exist:
-            # Si no existen, crearlos (por si acaso)
-            cart_items = cart.cart_items.all().select_related('product')
-            
-            for item in cart_items:
-                OrderItem.objects.create(
-                    transaction=tx,
-                    product=item.product,
-                    quantity=item.quantity,
-                    price_at_sale=item.product.amount_usd,
-                    status='pending'
-                )
-                
-                # Actualizar stock solo si no se había hecho antes
-                product = item.product
-                if product.quantity >= item.quantity:
-                    product.quantity = max(product.quantity - item.quantity, 0)
-                    product.save()
-            
-            # Calcular amount_usd
-            total_usd = sum(item.product.amount_usd * item.quantity for item in cart_items)
-            tx.amount_usd = total_usd
-        else:
-            print(f"OrderItems ya existen para la transacción {tx.id}")
-        
-        # Marcar carrito como inactivo y limpiar items
-        cart.is_active = False
-        cart.clear_items()
-        cart.save()
-        print(f"Carrito {cart.id} procesado y desactivado")
-    
     tx.save()
 
     return Response({
@@ -215,10 +196,11 @@ def update_transaction(request, transaction_id):
 @permission_classes([IsAuthenticated])
 def delete_transaction(request, transaction_id):
     try:
-        transaction = Transaction.objects.get(id=transaction_id)
+        # Obtener la transacción
+        tx = Transaction.objects.get(id=transaction_id)
 
         # Solo permitir eliminar transacciones pendientes
-        if transaction.status != 'pending':
+        if tx.status != 'pending':
             return Response(
                 {"success": False, "message": "Solo se pueden eliminar transacciones pendientes"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -227,35 +209,24 @@ def delete_transaction(request, transaction_id):
         # Usar atomic para asegurar que todo se ejecute correctamente o nada
         with transaction.atomic():
             # Obtener los OrderItems asociados a esta transacción
-            order_items = OrderItem.objects.filter(transaction=transaction)
+            order_items = OrderItem.objects.filter(transaction=tx)
             
             # Reponer el stock de cada producto
             items_restored = 0
             for order_item in order_items:
                 product = order_item.product
                 # Restaurar la cantidad que se había descontado
-                product.quantity += order_item.quantity
+                product.stock_quantity += order_item.quantity
                 product.save()
                 items_restored += 1
-                
-                # Opcional: Cambiar el estado del OrderItem a 'cancelled'
-                order_item.status = 'cancelled'
-                order_item.save()
-            
-            # Cambiar el estado de la transacción a 'cancelled' en lugar de eliminar
-            transaction.status = 'cancelled'
-            transaction.save()
-            
-            # Libera el carrito para que el usuario pueda crear uno nuevo
-            if hasattr(transaction, 'cart') and transaction.cart:
-                cart = transaction.cart
-                cart.is_active = False  # Desactivar este carrito
-                cart.save()
+                       
+            # Eliminar la transacción (esto eliminará los OrderItems por CASCADE)
+            tx.delete()
             
             return Response(
                 {
                     "success": True, 
-                    "message": f"Transacción cancelada correctamente. Se repusieron {items_restored} items al inventario."
+                    "message": f"Transacción eliminada correctamente. Se repusieron {items_restored} items al inventario."
                 },
                 status=status.HTTP_200_OK
             )
@@ -266,7 +237,7 @@ def delete_transaction(request, transaction_id):
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
-        logger.error(f"Error al cancelar transacción {transaction_id}: {str(e)}")
+        logger.error(f"Error al eliminar transacción {transaction_id}: {str(e)}")
         return Response(
             {"success": False, "message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -278,10 +249,9 @@ def delete_transaction(request, transaction_id):
 def check_pending_transactions(request, wallet_address):
     try:
         # Verificar si hay transacciones pendientes o confirmando para esta wallet
-        # Excluir cancelled y confirmed
         pending_transactions = Transaction.objects.filter(
             wallet_address=wallet_address,
-            status__in=['pending', 'confirming']  # Solo estos estados bloquean nuevas transacciones
+            status__in=['pending', 'confirming']
         ).order_by('-created_at')
         
         return Response({
@@ -424,79 +394,6 @@ def get_transaction_detail(request, tx_hash):
         return Response({'success': False, 'error': f'Transacción con hash {tx_hash} no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def get_cart(request, wallet_address):
-    wallet = wallet_address
-    if not wallet:
-        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        profile = UserProfile.objects.get(wallet_address=wallet)
-        cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
-        serializer = CartSerializer(cart, context={'request': request})
-        return Response(serializer.data)
-    except UserProfile.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def save_cart(request):
-    wallet = request.data.get("wallet")
-    if not wallet:
-        return Response({"error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        profile = UserProfile.objects.get(wallet_address=wallet)
-        cart, _ = Cart.objects.get_or_create(user=profile, is_active=True)
-        serializer = CartSerializer(cart, data=request.data, partial=False, context={'request': request})
-        if serializer.is_valid():
-            serializer.save(user=profile)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except UserProfile.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(["DELETE"])
-@permission_classes([AllowAny])
-def delete_cart(request, wallet_address):
-    wallet = wallet_address
-    if not wallet:
-        return Response({"success": False, "error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        with transaction.atomic():  # Todas las operaciones se ejecutan o ninguna. transaction viene de django.db
-            profile = UserProfile.objects.get(wallet_address=wallet_address)
-            cart = Cart.objects.get(user=profile)
-            cart.delete_with_items()
-            return Response({"success": True, "message": "Carrito eliminado"})
-    except Exception as e:
-        return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-
-@api_view(["DELETE"])
-@permission_classes([AllowAny])
-def clear_cart(request, wallet_address):
-    if not wallet_address:
-        return Response({"success": False, "error": "Wallet address is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        with transaction.atomic():
-            profile = UserProfile.objects.get(wallet_address=wallet_address)
-            cart = Cart.objects.get(user=profile, is_active=True)
-            cart.cart_items.all().delete()  # Solo eliminamos los ítems
-            return Response({"success": True, "message": "Ítems del carrito eliminados"})
-    except UserProfile.DoesNotExist:
-        return Response({"success": False, "error": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-    except Cart.DoesNotExist:
-        return Response({"success": False, "error": "Carrito no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({"success": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_transaction_order_items(request, transaction_id):
@@ -507,4 +404,4 @@ def get_transaction_order_items(request, transaction_id):
 
     order_items = OrderItem.objects.filter(transaction=transaction)
     serializer = OrderItemSerializer(order_items, many=True)
-    return Response({"success": True, "orderItems":serializer.data}, status=status.HTTP_200_OK)
+    return Response({"success": True, "orderItems": serializer.data}, status=status.HTTP_200_OK)

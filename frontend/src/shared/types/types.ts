@@ -21,6 +21,7 @@ export interface ApiCartItem {
     name: string;
     description: string;
     amount_usd: number;
+    stock_quantity: number;
     category: string;
     image?: string | null;
   }
@@ -34,7 +35,7 @@ export interface Product {
   category: string;
   image?: string | null;
   amount_usd: number;
-  quantity: number;
+  stock_quantity: number;
 }
   
 export interface UserProfile {
@@ -131,7 +132,7 @@ export interface DashboardDataType {
   }>;
 };
 
-export interface UserTransactionsSumary{
+export interface UserTransactionsSummary{
   username: string,
   wallet_address: string,
   confirmed: number,

@@ -7,8 +7,7 @@ import {
   NativeSelect,
   Button,
   Dialog,
-  IconButton,
-  useDisclosure,
+  Portal,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useTokenPrices } from "@/shared/hooks/useTokenPrices";
@@ -27,6 +26,7 @@ interface PaymentFormProps {
   amount: string;
   setAmount: (amount: string) => void;
   isWalletRegistered: boolean | null;
+  hasStockIssues: boolean;
 }
 
 const TOKEN_OPTIONS = [
@@ -44,11 +44,11 @@ export function PaymentForm({
   amount, 
   setAmount,
   isWalletRegistered,
+  hasStockIssues,
 }: PaymentFormProps) {
   const { prices: tokenPrices, loading: isTokenLoading } = useTokenPrices();
   const { cart } = useCart();
   const { authenticate, isAuthenticated } = useWallet();  
-  const { onClose: closeAuthDialog } = useDisclosure();  
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [totalUSD, setTotalUSD] = useState(0);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -66,23 +66,24 @@ export function PaymentForm({
   }, [totalUSD, selectedToken, tokenPrices, setAmount]);
 
   const handleAuthAndPayment = async () => {
-    try {
-      if (!isAuthenticated) {
-        setShowAuthDialog(true);
-        return;
-      }
-        // Si ya está autenticado, proceder directamente al pago
-        await onSubmit(amount, selectedToken);
-
-      } catch (error) {
+    // Verificar stock antes de continuar
+    if (hasStockIssues) {
       toaster.create({
         title: "Error",
-        description: `Error al iniciar el pago: ${error instanceof Error ? error.message : ''}`,
+        description: "No hay suficiente stock de algunos productos. Por favor, edita tu carrito.",
         type: "error",
-        duration: 3000,
+        duration: 5000,
       });
+      return;
     }
-  }
+
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
+    
+    await onSubmit(amount, selectedToken);
+  };
 
   const handleAuthConfirm = async () => {
     setIsAuthLoading(true);
@@ -90,7 +91,7 @@ export function PaymentForm({
       const authSuccess = await authenticate();
       if (authSuccess) {
         await onSubmit(amount, selectedToken);
-        closeAuthDialog();        
+        setShowAuthDialog(false);        
       } else {
         console.warn("Autenticación fallida (authSuccess false)");        
       }
@@ -106,6 +107,8 @@ export function PaymentForm({
       setIsAuthLoading(false);
     }
   };
+
+  const isButtonDisabled = isProcessing || isAuthLoading || !amount || !isWalletRegistered || hasStockIssues;
 
   return (
     <Box p={6} boxShadow="md" width="100%" maxW="500px" className="form">
@@ -149,50 +152,58 @@ export function PaymentForm({
           </Text>
         )}
 
-      <IconButton
+        {hasStockIssues && (
+          <Text fontSize="sm" color="red.500" textAlign="center">
+            ⚠️ Hay productos sin stock suficiente. Por favor, revisa tu carrito.
+          </Text>
+        )}
+
+        <Button
           colorPalette="blue"
           onClick={handleAuthAndPayment}        
-          disabled={isProcessing || !amount || !isWalletRegistered}
+          disabled={isButtonDisabled}
           loading={isProcessing || isAuthLoading}
           loadingText={"Procesando..."}
           mt={4}
-          aria-label="Confirmar pago"
+          width="full"
         >
           <GrTransaction />
           {isAuthenticated ? "Confirmar Pago" : "Autenticar y Pagar"}
-        </IconButton>
+        </Button>
 
         {/* Dialog de autenticación */}
-        <Dialog.Root open={showAuthDialog} onOpenChange={(e) => !e.open && setShowAuthDialog(false)}>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Firma Requerida</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>Por favor, firma el mensaje en tu wallet para realizar una transacción segura.</Text>
-                {!isWalletRegistered && (
-                  <Text mt={2} color="red.500">
-                    Debes registrar tu wallet primero
-                  </Text>
-                )}
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.ActionTrigger asChild>
-                  <Button variant="outline">Cancelar</Button>
-                </Dialog.ActionTrigger>
-                <Button 
-                  colorPalette="blue" 
-                  onClick={handleAuthConfirm}
-                  loading={isAuthLoading}
-                  disabled={!isWalletRegistered}
-                >
-                  Firmar Mensaje
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
+        <Dialog.Root open={showAuthDialog} onOpenChange={(e) => setShowAuthDialog(e.open)}>
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Dialog.Title>Firma Requerida</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <Text>Por favor, firma el mensaje en tu wallet para realizar una transacción segura.</Text>
+                  {!isWalletRegistered && (
+                    <Text mt={2} color="red.500">
+                      Debes registrar tu wallet primero
+                    </Text>
+                  )}
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <Button variant="outline" onClick={() => setShowAuthDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    colorPalette="blue" 
+                    onClick={handleAuthConfirm}
+                    loading={isAuthLoading}
+                    disabled={!isWalletRegistered}
+                  >
+                    Firmar Mensaje
+                  </Button>
+                </Dialog.Footer>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
         </Dialog.Root>
       </VStack>
     </Box>

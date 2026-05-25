@@ -126,7 +126,7 @@ export const authCompanyAPI = {
 
   getUserStats: async (): Promise<ApiResponse<UserStats[]>> => {
     try {
-      const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-users-transactions-sumary`);
+      const { data } = await authCompanyAxios.get(`${API_PATHS.company}/get-users-transactions-summary/`);
       return { success: true, data: data.users || [] };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al obtener los usuarios';

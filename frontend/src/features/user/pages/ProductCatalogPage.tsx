@@ -180,7 +180,7 @@ export const ProductCatalogPage = () => {
         <Button
           colorScheme="blue"
           mt={8}
-          onClick={() => navigate("/cart-sumary")}
+          onClick={() => navigate("/cart-summary")}
           position="fixed"
           bottom={4}
           right={4}

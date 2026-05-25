@@ -41,7 +41,7 @@ export const CheckTransactions = ({
 
       // Actualiza el estado basado en la respuesta
       const newStatus: TransactionStatus = {
-        status: result.status === 'success' && result.processed > 0 ? 'confirmed' : result.failed > 0 ? 'failed' : 'No procesada',
+        status: result.status === 'success' && result.confirmed > 0 ? 'confirmed' : result.failed > 0 ? 'failed' : 'No procesada',
         processed: result.processed,
         failed: result.failed,
         message: result.message,

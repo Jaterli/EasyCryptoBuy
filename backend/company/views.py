@@ -44,10 +44,10 @@ def validate_cart(request):
 
             try:
                 product = Product.objects.get(id=product_id)
-                if quantity_requested > product.quantity:
+                if quantity_requested > product.stock_quantity:
                     invalid.append({
                         "id": product_id,
-                        "available": product.quantity
+                        "available": product.stock_quantity 
                     })
             except Product.DoesNotExist:
                 invalid.append({ "id": product_id, "available": 0 })
@@ -157,9 +157,9 @@ def company_dashboard(request):
     ## Total de transacciones históricas
     total_transactions = Transaction.objects.count()
     
-    ## Valor del inventario (suma de precio * cantidad)
+    ## Valor del inventario (suma de precio * stock_quantity)
     inventory_value = Product.objects.aggregate(
-        total_value=Sum(F('amount_usd') * F('quantity'), 
+        total_value=Sum(F('amount_usd') * F('stock_quantity'), 
         output_field=DecimalField(max_digits=20, decimal_places=2))
     )['total_value'] or 0
 
@@ -261,7 +261,7 @@ def get_transaction_order_items(request, transaction_id):
 
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
-def get_users_transactions_sumary(request):
+def get_users_transactions_summary(request):
     users = UserProfile.objects.all()
 
     data = []

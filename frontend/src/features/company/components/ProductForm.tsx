@@ -26,7 +26,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
       name: '', 
       description: '', 
       amount_usd: 0, 
-      quantity: 0, 
+      stock_quantity: 0, 
       category: '',
       image: null 
     }
@@ -35,7 +35,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
   // Simplificado: un solo estado para strings de números
   const [numericFields, setNumericFields] = useState({
     amountStr: String(initialData?.amount_usd ?? '0'),
-    quantityStr: String(initialData?.quantity ?? '0')
+    quantityStr: String(initialData?.stock_quantity ?? '0')
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -47,7 +47,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
   };
 
   // Simplificado: función genérica para manejar cambios numéricos
-  const handleNumericChange = (field: 'amount_usd' | 'quantity', value: string, isFloat: boolean = false) => {
+  const handleNumericChange = (field: 'amount_usd' | 'stock_quantity', value: string, isFloat: boolean = false) => {
     setNumericFields(prev => ({
       ...prev,
       [`${field === 'amount_usd' ? 'amountStr' : 'quantityStr'}`]: value
@@ -78,7 +78,7 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
     });
     
     formData.append('amount_usd', String(product.amount_usd ?? 0));
-    formData.append('quantity', String(product.quantity ?? 0));
+    formData.append('stock_quantity', String(product.stock_quantity ?? 0));
     
     if (imageFile) formData.append('image', imageFile);
     
@@ -169,12 +169,12 @@ export const ProductForm: React.FC<Props> = ({ initialData, onSubmit, onCancel }
             <Field.Label>Cantidad</Field.Label>
             <NumberInput.Root
               value={numericFields.quantityStr}
-              onValueChange={(e) => handleNumericChange('quantity', e.value, false)}
+              onValueChange={(e) => handleNumericChange('stock_quantity', e.value, false)}
               min={0}
               step={1}
             >
               <NumberInput.Control />
-              <NumberInput.Input name="quantity" />
+              <NumberInput.Input name="stock_quantity" />
             </NumberInput.Root>
           </Field.Root>
         </Flex>

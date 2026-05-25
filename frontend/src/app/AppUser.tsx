@@ -30,7 +30,7 @@ export const AppUser = () => {
             <Routes>
               <Route path="/dashboard" element={<Home />} />
               <Route path="/products-catalog" element={<ProductCatalogPage />} />
-              <Route path="/cart-sumary" element={<CartSummaryPage />} />
+              <Route path="/cart-summary" element={<CartSummaryPage />} />
               <Route path="/purchase-history" element={<RequireWallet><RequireRegistration><RequireAuthentication><PurchaseHistory /></RequireAuthentication></RequireRegistration></RequireWallet>} />
               <Route path="/payment" element={<RequireWallet><RequireRegistration><Payment /></RequireRegistration></RequireWallet>} />
               <Route path="/register-wallet" element={<RequireWallet><RegisterWalletPage /></RequireWallet>} />

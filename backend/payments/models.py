@@ -21,67 +21,12 @@ class Transaction(models.Model):
         return f"{self.wallet_address} - {self.transaction_hash} - {self.amount} - {self.status}"
         
 
-class Cart(models.Model):
-    user = models.ForeignKey( 
-        UserProfile, 
-        on_delete=models.CASCADE, 
-        related_name='carts' 
-    )
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    transaction = models.OneToOneField(
-        'Transaction',
-        on_delete=models.SET_NULL, # Establece el carrito a null pero no lo elimina
-        null=True,
-        blank=True,
-        related_name='cart'
-    )
-
-    def __str__(self):
-        return f"Cart #{self.id} for {self.user.user.username}. Active: {self.is_active}"
-    
-    def clear_items(self):
-        """Elimina todos los items del carrito"""
-        self.cart_items.all().delete()
-    
-    def delete_with_items(self):
-        """Elimina el carrito y todos sus items (eliminación completa)"""
-        self.clear_items()  # Primero borra los items
-        self.delete()       # Luego borra el carrito
-
-    class Meta:
-        # Constraints para asegurar que solo un carrito activo por usuario
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user'], 
-                condition=models.Q(is_active=True),
-                name='unique_active_cart_per_user'
-            )
-        ]
-        verbose_name = 'Shopping Cart'
-        verbose_name_plural = 'Shopping Carts'
-        
-
-class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart_items')
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
-    
-    def __str__(self):
-        return f"{self.quantity} x {self.product.name} (Cart #{self.cart.id})"
-    
-    class Meta:
-        unique_together = ('cart', 'product')    
-        verbose_name = 'Cart Item'
-        verbose_name_plural = 'Cart Items'
-
-
 class OrderItem(models.Model):
     STATUS_CHOICES = [
         ('pending', 'pendiente'),
         ('processed', 'procesado'),
         ('shipped', 'enviado'),
+        ('cancelled', 'cancelado'),
     ]
 
     transaction = models.ForeignKey(

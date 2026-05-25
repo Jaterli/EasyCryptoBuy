@@ -49,6 +49,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
         return FaLink;
       case 'pending':
         return FaClock;
+      case 'cancelled':
+        return FaTimesCircle;        
       case 'failed':
         return FaTimesCircle;
       default:
@@ -62,6 +64,8 @@ export default function TransactionData({ tx }: TransactionDataProps) {
         return 'Confirmada en blockchain';
       case 'pending':
         return 'Pendiente de confirmación';
+      case 'cancelled':
+        return 'Transacción cancelada';        
       case 'failed':
         return 'Transacción fallida';
       default:
@@ -74,7 +78,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
     toaster.create({ title: "Hash copiado", type: "success", duration: 2000 });
   };
 
-  const showSummary = tx.status != 'failed';
+  const showSummary = tx.status != 'failed' && tx.status != 'cancelled' && tx.transaction_hash !== tx.wallet_address; // Solo mostrar resumen si no es fallida/cancelada y tiene hash registrado
 
   return (
     <>
@@ -146,7 +150,7 @@ export default function TransactionData({ tx }: TransactionDataProps) {
             
             <Stack direction={'row'} justify={'space-between'}>
               <Text fontSize="sm" truncate>
-                {(tx.transaction_hash === tx.wallet_address) ? "Hash sin registrar" : tx.transaction_hash}
+                {(tx.status != 'confirmed') ? "Hash sin registrar" : tx.transaction_hash}
                 <IconButton
                   aria-label="Copiar hash"                                 
                   size="xs"

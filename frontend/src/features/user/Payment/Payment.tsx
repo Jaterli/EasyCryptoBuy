@@ -1,6 +1,6 @@
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { useState, useEffect, useCallback } from "react";
-import { Box, VStack, Text, Spinner, Heading, HStack, Button, Grid, GridItem, Image, Badge, Flex } from "@chakra-ui/react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Box, VStack, Text, Spinner, Heading, HStack, Button, Grid, GridItem, Image, Badge, Flex, Dialog, Portal } from "@chakra-ui/react";
 import { toaster } from "@/shared/components/ui/toaster";
 import ContractABI from "@/abis/PAYMENT_CONTRACT_ABI.json";
 import StandardERC20ABI from "@/abis/ERC20.json";
@@ -37,20 +37,23 @@ export interface PendingTransaction {
 export function Payment() {
   const navigate = useNavigate();
   const { address, isWalletRegistered, isLoading: isAuthLoading } = useWallet();
-  const { cart, setCart, cartLoading } = useCart();
+  const { cart, clearCart, setCart, cartLoading } = useCart();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<keyof typeof TOKEN_DECIMALS>("ETH");
   const [pendingTx, setPendingTx] = useState<PendingTransaction | null>(null);
-  // const [checkPendingTx, setChekPendingTx] = useState<boolean>(false);
   const [transactionData, setTransaction] = useState<Transaction | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [stockIssues, setStockIssues] = useState<{ id: string, available: number }[]>([]);
   const [checkingStock, setCheckingStock] = useState(false);
   const [transaction_id, setTransactionId] = useState<number | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [hasPendingTransactions, setHasPendingTransactions] = useState(false);
+  const [checkingPending, setCheckingPending] = useState(true);
   const { data: hash, writeContract, isPending: isTransactionPending, error: writeError } = useWriteContract();
   const { data: approveHash, writeContract: writeApprove, isPending: isApprovePending, error: writeApproveError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const { isLoading: isApproving, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
+  const cartSnapshotRef = useRef<typeof cart>([]);
 
   const showToast = useCallback((type: 'info' | 'error' | 'success', title: string, message: string) => {
     toaster.create({ title, description: message, type, duration: type === 'error' ? 5000 : 3000 });
@@ -108,7 +111,6 @@ export function Payment() {
     return (
       <VStack align="stretch" spaceY={4} p={4}>
         {steps.map((step, index) => {
-          // No renderizar el paso 0 (index 0) si token es ETH y estamos en approving
           if (token === "ETH" && index === 1) {
             return null;
           }
@@ -159,9 +161,41 @@ export function Payment() {
     if (transaction_id) {
       await axiosUserAPI.deleteTransaction(transaction_id);
       setTransactionId(null);
+      setCart(cartSnapshotRef.current);
     }
     setPendingTx(null);
+    setIsDialogOpen(false);
   };
+
+  // Actualizar la referencia cada vez que el carrito cambie (solo cuando tiene items)
+  useEffect(() => {
+    if (cart.length > 0) {
+      cartSnapshotRef.current = [...cart]; // Guardar una copia profunda
+    }
+  }, [cart]);
+
+  // Verificar transacciones pendientes al cargar el componente y cuando cambia la wallet
+  useEffect(() => {
+    const checkPending = async () => {
+      if (!address || !isWalletRegistered) {
+        setCheckingPending(false);
+        return;
+      }
+
+      setCheckingPending(true);
+      try {
+        const response = await axiosUserAPI.checkPendingTransactions(address);
+        setHasPendingTransactions(response.data.has_pending);
+      } catch (error) {
+        console.error("Error verificando transacciones pendientes:", error);
+        setHasPendingTransactions(false);
+      } finally {
+        setCheckingPending(false);
+      }
+    };
+
+    checkPending();
+  }, [address, isWalletRegistered]);
 
   useEffect(() => {
     if (writeError || writeApproveError) {
@@ -200,9 +234,9 @@ export function Payment() {
     }
   }, [isConfirming]);
 
-  // 1. Validación del carrito
+  // Validación del carrito y stock
   useEffect(() => {
-    if (cart && cart.length > 0) {
+    if (cart && cart.length > 0 && !hasPendingTransactions) {
       const validateCart = async () => {
         setCheckingStock(true);
         try {
@@ -218,34 +252,13 @@ export function Payment() {
       };
       validateCart();
     }
-  }, [cart]);
+  }, [cart, hasPendingTransactions]);
 
-  // Chequeamos si hay transacciones anteriores que no se marcaron como confirmed
-  // useEffect(() => {
-  //   if (address){
-  //     const checkForPendingTx = async  () => {
-  //       try {
-  //         const { data } = await axiosUserAPI.checkPendingTransactions(address);       
-  //         if (data.success) {
-  //           setChekPendingTx(data.has_pending);
-  //           return;
-  //         } else {
-  //           console.error("Error checking pending transactions:", data.message);
-  //         }
-  //       } catch (err) {
-  //         console.error("Error verificando transacciones pendientes:", err);
-  //       }
-  //     };
-  //     checkForPendingTx();
-  //   }
-  // },[address]);
-
-  // 2. Actualización y obtención de detalles de transacción
+  // Actualización y obtención de detalles de transacción después de confirmación
   useEffect(() => {
     if (isConfirmed && pendingTx && transaction_id) {
       const updateAndFetchTransaction = async () => {
         try {
-          // Actualizar la transacción
           const updateResponse = await axiosUserAPI.updateTransaction(
             transaction_id,
             {
@@ -260,34 +273,29 @@ export function Payment() {
             throw new Error(updateResponse.data.message || "Error al actualizar la transacción");
           }
   
-          // Obtener detalles
           const detailsResponse = await axiosUserAPI.getTransactionDetail(hash);
           
           if (detailsResponse.success && detailsResponse.data) {
-            console.log("Vaciando carrito");
-            setCart([]);
-            //clearCart();
             setTransaction(detailsResponse.data);
             setPaymentCompleted(true);
+            setIsDialogOpen(false);
           } else {
-            console.log("Error al obtener detalles de la transacción");
             throw new Error(detailsResponse.error || "Error al obtener detalles de la transacción");
           }
         } catch (error) {
-          //cleanupFailedTransaction();
           const apiError = error as ApiError;
           const errorMessage = apiError.response ? apiError.response.data.message : "Error desconocido";  
           showToast('error', "Error en el servidor", errorMessage);
-          console.error("Error en el servidor:", errorMessage);
           setPendingTx(null);
+          setIsDialogOpen(false);
         }
       };
   
       updateAndFetchTransaction();
     }
-  }, [isConfirmed, hash, address, transaction_id]);
+  }, [isConfirmed, hash, address, transaction_id, pendingTx, showToast]);
 
-  // 3. Polling de estado de transacción
+  // Polling de estado de transacción
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -297,8 +305,7 @@ export function Payment() {
           const response = await axiosUserAPI.getTransactionDetail(hash);
           if (response.success && response.data) {
             setTransaction(response.data);
-
-            if (response.data.status && response.data.status === 'confirmed') {
+            if (response.data.status === 'confirmed') {
               clearInterval(interval);
             }
           }
@@ -314,19 +321,27 @@ export function Payment() {
         if (interval) clearInterval(interval);
       };
     }
-  }, [hash, paymentCompleted]); 
+  }, [paymentCompleted]); 
 
+  // Ejecutar pago con tokens (no ETH)
   useEffect(() => {
     if (token !== "ETH" && isApproveConfirmed && pendingTx) {
       const executeTokenPayment = async () => {
-        try {          
-          // Registrar siempre una nueva transacción para tokens no ETH
+        try {        
+          const savedCart = cartSnapshotRef.current;
           const registerResponse = await axiosUserAPI.registerTransaction({
             wallet_address: address!,
             amount: pendingTx.amount,
-            token: pendingTx.token
+            token: pendingTx.token,
+            cart_items: (savedCart.length > 0 ? savedCart : cart).map(item => ({
+              product_id: item.product.id,
+              quantity: item.quantity
+            }))                      
           });
           setTransactionId(registerResponse.data.transaction_id);
+
+          // Limpiar el carrito inmediatamente después de registrar la transacción
+          await clearCart();
 
           const amountInUnits = convertToTokenUnits(pendingTx.amount, pendingTx.token);
           const paymentFunctionName = pendingTx.token === "USDC" ? "payUSDC"
@@ -344,17 +359,30 @@ export function Payment() {
           showToast('error', "Error en el pago", errorMessage);
           setPendingTx(null);
           setTransactionId(null);
+          setIsDialogOpen(false);
         }
       };
 
       executeTokenPayment();
     }
-  }, [isApproveConfirmed, pendingTx, token, writeContract, address, convertToTokenUnits, showToast]);
+  }, [isApproveConfirmed, pendingTx, token, writeContract, address, convertToTokenUnits, showToast, clearCart]);
 
-  // 4. Registro de transacción inicial
+  // Registro de transacción inicial
   const handlePayment = async (amount: string, token: keyof typeof TOKEN_DECIMALS) => {
+    // Verificar stock antes de continuar 
+    if (stockIssues.length > 0) {
+      showToast('error', "Error", "No hay suficiente stock de algunos productos. Por favor, edita tu carrito.");
+      return;
+    }
+
     if (!address) {
       showToast('error', "Error", "Por favor, conecta tu wallet primero.");
+      return;
+    }
+    
+    // Verificar si el carrito tiene items
+    if (!cart || cart.length === 0) {
+      showToast('error', "Error", "Tu carrito está vacío.");
       return;
     }
         
@@ -364,19 +392,28 @@ export function Payment() {
       return;
     }
 
+    setIsDialogOpen(true);
+
     try {
       setPendingTx({ amount, token });
       const amountInUnits = convertToTokenUnits(amount, token);
 
       if (token === "ETH") {
-        // Para ETH, registramos la transacción primero
+        const savedCart = cartSnapshotRef.current;
         const registerResponse = await axiosUserAPI.registerTransaction({
           wallet_address: address,
           amount,
-          token
+          token,
+          cart_items: (savedCart.length > 0 ? savedCart : cart).map(item => ({
+            product_id: item.product.id,
+            quantity: item.quantity
+          }))
         });
         setTransactionId(registerResponse.data.transaction_id);
         
+        // Limpiar el carrito inmediatamente después de registrar la transacción
+        await clearCart();
+
         await writeContract({
           address: CONTRACT_ADDRESSES.PAYMENT,
           abi: ContractABI,
@@ -399,11 +436,57 @@ export function Payment() {
       showToast('error', "Error en transacción", errorMessage);
       console.error("Error en transacción:", errorMessage);
       setPendingTx(null);
+      setIsDialogOpen(false);
     }
   };
-  const isLoadingState = isTransactionPending || isConfirming || isApproving || isApprovePending || isAuthLoading;
-  const totalUSD = cart.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
 
+  const isLoadingState = isTransactionPending || isConfirming || isApproving || isApprovePending || isAuthLoading;
+  const totalUSD = cartSnapshotRef.current.reduce((sum, item) => sum + item.product.amount_usd * item.quantity, 0);
+  const hasStockIssues = stockIssues.length > 0;
+
+  // Mostrar pantalla de carga mientras se verifican transacciones pendientes
+  if (checkingPending) {
+    return (
+      <Box p={5} mt={5} mb={5} textAlign="center">
+        <VStack spaceY={4}>
+          <Spinner size="xl" />
+          <Text>Verificando transacciones pendientes...</Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  // Mostrar mensaje si hay transacciones pendientes
+  if (hasPendingTransactions && !paymentCompleted) {
+    return (
+      <Box p={5} mt={5} mb={5}>
+        <VStack spaceY={6} align="center">
+          <Heading size="lg" color="orange.500">
+            Transacción Pendiente
+          </Heading>
+          <Text textAlign="center" fontSize="lg">
+            Tienes una o más transacciones pendientes de confirmación.
+          </Text>
+          <Text textAlign="center" color="gray.600">
+            Por favor, espera a que se confirme o cancele la transacción actual antes de realizar una nueva compra.
+          </Text>
+          <Button 
+            colorPalette="blue" 
+            onClick={() => window.location.reload()}
+            mt={4}
+          >
+            Verificar estado
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/purchase-history")}
+          >
+            Ver historial de transacciones
+          </Button>
+        </VStack>
+      </Box>
+    );
+  }
 
   if (paymentCompleted && transactionData) {
     return (
@@ -427,29 +510,8 @@ export function Payment() {
     );
   }
 
-  // if (checkPendingTx){
-  //   return (
-  //     <Box p={5} mt={5} mb={5}>
-  //       <VStack spaceY={8} align="center">
-  //         <Text textAlign={"center"} color="red.500" fontSize="lg">
-  //           Tienes transacciones pendientes que aún no ha sido confirmadas en la blockchain. <br />
-  //           Si no se confirman en los próximos minutos, contacte con la empresa. Mientras tanto no podrá realizar nuevas compras.
-  //         </Text>
-  //         <Button 
-  //           colorPalette="blue" 
-  //           onClick={() => navigate("/purchase-history")}
-  //           mt={4}
-  //         >
-  //           Historial de Compras
-  //         </Button>
-  //       </VStack>
-  //     </Box>
-  //   );
-  // }
-
   return (
     <Box p={{ base: 4, md: 5 }} maxW="1400px" mx="auto">
-
       <Heading size="xl" mb={6}>
         Resumen de tu compra
       </Heading>
@@ -458,24 +520,23 @@ export function Payment() {
         templateColumns={{ base: "1fr", lg: "1fr 1fr" }} 
         gap={{ base: 6, lg: 8 }}
       >
-        {/* Columna izquierda - Resumen del carrito */}
         <GridItem>
           {cartLoading ? (
             <VStack>
               <Spinner size="md" />
               <Text>Cargando carrito...</Text>
             </VStack>
-          ) : cart.length === 0 ? (
+          ) : cartSnapshotRef.current.length === 0 && !isLoadingState ? (
             <VStack gap={4} textAlign="center" py={8}>
               <Text fontSize="xl" fontWeight="medium">Tu carrito está vacío</Text>
               <Text color="gray.500">No hay productos para mostrar</Text>
-              <Button colorScheme="blue" mt={4} as="a" onClick={() => navigate("/products-catalog")}>
+              <Button colorScheme="blue" mt={4} onClick={() => navigate("/products-catalog")}>
                 Explorar productos
               </Button>
             </VStack>
           ) : (
             <VStack align="stretch" gap={4}>
-              {cart.map((item) => (
+              {cartSnapshotRef.current.map((item) => (
                 <Box 
                   key={item.product.id} 
                   p={4} 
@@ -525,15 +586,14 @@ export function Payment() {
             </VStack>
           )}
 
-          {/* Mensajes de stock */}
-          {cart.length > 0 && checkingStock && (
+          {cartSnapshotRef.current.length > 0 && checkingStock && (
             <Box mt={4} textAlign="center">
               <Spinner size="lg" />
               <Text mt={2}>Verificando disponibilidad...</Text>
             </Box>
           )}
           
-          {cart.length > 0 && stockIssues.length > 0 && (
+          {cartSnapshotRef.current.length > 0 && hasStockIssues && (
             <Box mt={4} p={4} borderWidth="1px" borderRadius="md" borderColor="red.200">
               <Text color="red.600" fontWeight="bold" mb={2}>
                 No hay suficiente stock para los siguientes productos:
@@ -541,7 +601,7 @@ export function Payment() {
               <VStack align="stretch" gap={2}>
                 {stockIssues.map((item) => (
                   <Text key={item.id} fontSize="sm">
-                    Producto ID: {item.id} — Disponible: {item.available}
+                    Producto ID: {item.id} — Disponible: {item.available} unidades
                   </Text>
                 ))}
               </VStack>
@@ -557,30 +617,10 @@ export function Payment() {
           )}
         </GridItem>
 
-        {/* Columna derecha - Formulario de pago */}
-        {cart.length > 0 && (
+        {cartSnapshotRef.current.length > 0 && !hasPendingTransactions && (
           <GridItem>
             <Box w="100%">
-              {writeError || writeApproveError ? (
-                <Box p={6} overflowX="auto">
-                  <Text overflowX="auto" fontSize="sm" color="red.500" textAlign="center">
-                    Error: {writeError?.message || writeApproveError?.message}
-                  </Text>
-                  <Button 
-                    mt={4}
-                    colorPalette="blue" 
-                    onClick={() => window.location.reload()}
-                    width="full"
-                  >
-                    Reintentar pago
-                  </Button>
-                </Box>
-              ) : isLoadingState ? (
-                <Box pl={6}>
-                  <Heading size="lg" mb={6} textAlign="left">Proceso de transacción</Heading>
-                  {renderPaymentProgress()}
-                </Box>
-              ) : !isWalletRegistered ? (
+              {!isWalletRegistered ? (
                 <VStack gap={4} p={6}>
                   <Text textAlign="center">
                     Antes de realizar tu primera transacción en nuestra plataforma de compras onchain, 
@@ -602,12 +642,67 @@ export function Payment() {
                   amount={amount}
                   setAmount={setAmount}
                   isWalletRegistered={isWalletRegistered}
+                  hasStockIssues={hasStockIssues}
                 />
               )}
             </Box>
           </GridItem>
         )}
       </Grid>
+
+      <Dialog.Root 
+        open={isDialogOpen} 
+        onOpenChange={(e) => {
+          if (!isLoadingState) {
+            setIsDialogOpen(e.open);
+          }
+        }}
+        closeOnInteractOutside={false}
+        closeOnEscape={false}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Procesando transacción</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                {writeError || writeApproveError ? (
+                  <Box>
+                    <Text color="red.500" textAlign="center">
+                      Error: {writeError?.message || writeApproveError?.message}
+                    </Text>
+                    <Button 
+                      mt={4}
+                      colorPalette="blue" 
+                      onClick={() => {
+                        setIsDialogOpen(false);
+                        window.location.reload();
+                      }}
+                      width="full"
+                    >
+                      Reintentar pago
+                    </Button>
+                  </Box>
+                ) : (
+                  renderPaymentProgress()
+                )}
+              </Dialog.Body>
+              <Dialog.Footer>
+                {!isLoadingState && (writeError || writeApproveError) && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cerrar
+                  </Button>
+                )}
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Box>
   );
 }
