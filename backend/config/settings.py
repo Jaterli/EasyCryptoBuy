@@ -45,7 +45,7 @@ TOKEN_ADDRESSES = {
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@p_v5a)9#nvf@i8gs481!)lqti*5^0r%rumsub$ri$z(5&^pqv'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -98,6 +98,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",    
     "http://127.0.0.1:5173",    
     "https://sepolia.drpc.org",
+    "easycryptobuy.jaterli.com",
+	"www.easycryptobuy.jaterli.com",
     #"eth.merkle.io",
 ]
 

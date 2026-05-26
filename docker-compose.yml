@@ -1,0 +1,43 @@
+services:
+  db: # <-- AÑADE ESTO
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=easycryptobuy_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=your_secure_password
+    networks:
+      - web_network
+
+  easycryptobuy_backend: # <-- TU BACKEND
+    build: ./ruta/a/tu/backend # O usa 'image: ...'
+    # environment:
+    #   - DATABASE_URL=postgresql://...
+    networks:
+      - web_network
+
+  easycryptobuy_frontend: # <-- TU FRONTEND
+    build: ./ruta/a/tu/frontend
+    networks:
+      - web_network
+
+  nginx-proxy: # <-- TU PROXY (YA LO TIENES)
+    image: nginx:alpine
+    container_name: nginx_reverse_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - web_network
+
+networks:
+  web_network:
+    external: true
+
+volumes:
+  postgres_data: # <-- VOLUMEN PARA LA DB
