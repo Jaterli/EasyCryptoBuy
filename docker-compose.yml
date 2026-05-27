@@ -51,7 +51,9 @@ services:
 
 volumes:
   static_volume:
+    name: easycryptobuy_static_volume
   media_volume:
+    name: easycryptobuy_media_volume
   postgres_data:
 
 networks:
