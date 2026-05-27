@@ -9,7 +9,7 @@ COPY package.json package-lock.json* ./
 RUN yarn install --frozen-lockfile
 
 # Copiar el código fuente y compilar
-COPY . .
+COPY frontend/ .
 RUN yarn build
 
 # Etapa 2: Servir con Nginx
