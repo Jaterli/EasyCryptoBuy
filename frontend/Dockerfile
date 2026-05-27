@@ -6,11 +6,11 @@ WORKDIR /app
 
 # Copiar archivos de configuración y dependencias
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN yarn install --frozen-lockfile
 
 # Copiar el código fuente y compilar
 COPY . .
-RUN npm run build
+RUN yarn build
 
 # Etapa 2: Servir con Nginx
 FROM nginx:stable-alpine
