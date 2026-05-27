@@ -10,6 +10,7 @@ RUN yarn install --frozen-lockfile
 
 # Copiar el código fuente y compilar
 COPY frontend/ .
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 RUN yarn build
 
 # Etapa 2: Servir con Nginx
