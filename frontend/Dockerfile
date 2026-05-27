@@ -5,7 +5,7 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 # Copiar archivos de configuración y dependencias
-COPY package.json package-lock.json* ./
+COPY frontend/package.json frontend/yarn.lock* ./
 RUN yarn install --frozen-lockfile
 
 # Copiar el código fuente y compilar
