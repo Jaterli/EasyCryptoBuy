@@ -19,4 +19,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Comando para correr Gunicorn (conexión a socket o host)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "easycryptobuy.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
