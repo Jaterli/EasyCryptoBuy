@@ -11,30 +11,21 @@ services:
     env_file:
       - .env 
     environment:
-      - ENVIRONMENT=production  # Forzar producción en Docker
+      - ENVIRONMENT=production
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started        
+        condition: service_started
     networks:
       - web_network
     expose:
       - "8000"
-    redis:
-      image: redis:7-alpine
-      container_name: easycryptobuy_redis
-      restart: always
-      networks:
-        - web_network
-      expose:
-        - "6379"
-
 
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: docker/frontend/Dockerfile  # ← OJO: debería ser docker/frontend/Dockerfile
     container_name: easycryptobuy_frontend
     restart: always
     networks:
@@ -49,7 +40,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
-      - .env  # Comparte el mismo .env
+      - .env
     networks:
       - web_network
     expose:
@@ -59,6 +50,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis:  # ← Redis como servicio independiente (misma indentación que backend)
+    image: redis:7-alpine
+    container_name: easycryptobuy_redis
+    restart: always
+    networks:
+      - web_network
+    expose:
+      - "6379"
 
 volumes:
   static_volume:
@@ -70,4 +70,3 @@ volumes:
 networks:
   web_network:
     external: true
-
