@@ -20,8 +20,16 @@ FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 # Si usas Create React App, la carpeta se llama 'build' en lugar de 'dist'
 
-# Copiar una configuración personalizada de Nginx (opcional)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Configuración simple de nginx
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
