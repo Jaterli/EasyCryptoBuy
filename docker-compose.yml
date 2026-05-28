@@ -2,7 +2,7 @@ services:
   backend:
     build: 
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: docker/backend/Dockerfile
     container_name: easycryptobuy_backend
     restart: always
     volumes:
@@ -19,6 +19,15 @@ services:
       - web_network
     expose:
       - "8000"
+    redis:
+      image: redis:7-alpine
+      container_name: easycryptobuy_redis
+      restart: always
+      networks:
+        - web_network
+      expose:
+        - "6379"
+
 
   frontend:
     build:
@@ -60,11 +69,3 @@ networks:
   web_network:
     external: true
 
-redis:
-  image: redis:7-alpine
-  container_name: easycryptobuy_redis
-  restart: always
-  networks:
-    - web_network
-  expose:
-    - "6379"

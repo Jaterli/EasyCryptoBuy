@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY ./backend/ /app/
 
 # Script de entrada para ejecutar Gunicorn
-COPY entrypoint.sh /entrypoint.sh
+COPY docker/backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Exponer el puerto de la API
