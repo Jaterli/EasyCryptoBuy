@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -6,17 +6,16 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev python3-dev && rm -rf /var/lib/apt/lists/*
 
 # Copiar e instalar dependencias de Python
-COPY backend/requirements.txt .
+COPY ./backend/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copiar el resto del código
-COPY backend/ .
+COPY ./backend/ /app/
 
-# Recopilar archivos estáticos (importante)
-RUN python manage.py collectstatic --noinput
+# Script de entrada para ejecutar Gunicorn
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Puerto en el que correrá Gunicorn
+# Exponer el puerto de la API
 EXPOSE 8000
-
-# Comando para correr Gunicorn (conexión a socket o host)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+ENTRYPOINT ["/entrypoint.sh"]
