@@ -62,6 +62,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+CSRF_TRUSTED_ORIGINS = [ 
+    'https://easycryptobuy.jaterli.com',
+    'https://www.easycryptobuy.jaterli.com',
+]
+
+# Configuración SSL
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = False  # El reverse proxy maneja la redirección
+
+
 # ========== STATIC & MEDIA ==========
 STATIC_URL = '/static/'
 STATIC_ROOT = '/app/staticfiles'
