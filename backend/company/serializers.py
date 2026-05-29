@@ -4,6 +4,15 @@ from payments.models import OrderItem, Transaction, UserProfile
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    
+    image = serializers.SerializerMethodField()
+    
+    def get_image(self, obj):
+        if obj.image:
+            # Devuelve solo la ruta relativa (ej: /media/products/imagen.jpg)
+            return obj.image.url
+        return None
+
     class Meta:
         model = Product
         fields = '__all__'
